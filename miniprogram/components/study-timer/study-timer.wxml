@@ -1,5 +1,19 @@
 <view class="timer-container">
-  <view class="subject-text">{{subject}}</view>
+  <picker mode="selector" range="{{subjects}}" value="{{selectedIndex}}" bindchange="onSubjectPickerChange">
+    <view class="subject-picker">
+      <text class="subject-label">{{subjects[selectedIndex]}}</text>
+      <text class="subject-arrow">▾</text>
+    </view>
+  </picker>
   <view class="time-display">{{displayText}}</view>
-  <button>开始</button>
+  <block wx:if="{{!running}}">
+    <view class="minutes-input-row">
+      <input class="minutes-input" type="number" value="{{minutesInput}}" placeholder="输入分钟" bindinput="onMinutesInput" />
+      <text class="minutes-label">分钟</text>
+    </view>
+    <view class="start-btn" bindtap="toggleTimer">开始</view>
+  </block>
+  <block wx:elif="{{running}}">
+    <view class="start-btn running" bindtap="toggleTimer">暂停</view>
+  </block>
 </view>

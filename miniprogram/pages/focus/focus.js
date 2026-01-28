@@ -29,10 +29,10 @@ Page({
     callFunctionCode: "",
     callCreateCollectionCode: "",
     callUploadFileCode: "",
-    
+
     // --- 新增的“专注学习”功能数据 ---
-    subject: '未知科目', 
-    initialTime: 25 * 60, 
+    subject: '未知科目',
+    initialTime: 25 * 60,
     partnerAvatar: '/images/icons/doubao.png',
     showBubble: false,
     bubbleText: '',
@@ -47,7 +47,7 @@ Page({
     showSummaryModal: false,
     finalStudyDuration: '00:00:00',
     totalSecondsStudied: 0,
-    heartBeat: false 
+    heartBeat: false
   },
 
   /**
@@ -113,6 +113,12 @@ Page({
     this.setData({ totalSecondsStudied: e.detail.totalSeconds });
   },
 
+  onSubjectChange(e) {
+    if (e && e.detail && e.detail.subject) {
+      this.setData({ subject: e.detail.subject });
+    }
+  },
+
   onFinish() {
     console.log('计时完成！');
     this.showSummary();
@@ -153,7 +159,7 @@ Page({
   updatePlanProgress() {
     const eventChannel = this.getOpenerEventChannel();
     if (eventChannel && eventChannel.emit) {
-      eventChannel.emit('acceptStudyRecord', { 
+      eventChannel.emit('acceptStudyRecord', {
         subject: this.data.subject,
         duration: this.data.totalSecondsStudied
       });
@@ -178,10 +184,10 @@ Page({
   handleBubbleFeedback() {
     // 触发爱心跳动动画
     this.setData({ heartBeat: true });
-    
+
     // 动画结束后重置状态，以便下次可以再次触发
     setTimeout(() => {
-        this.setData({ heartBeat: false });
+      this.setData({ heartBeat: false });
     }, 500); // 动画时长为 500ms
 
     // (可选) 在这里可以加入一些逻辑，比如向服务器发送一个“感谢鼓励”的事件
@@ -189,7 +195,7 @@ Page({
   },
 
   // 同样，在 js 文件中增加这个空函数，以支持 wxml 中的 catchtouchmove
-  preventTouchMove: function() {
+  preventTouchMove: function () {
     // do nothing
   },
 

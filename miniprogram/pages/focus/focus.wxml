@@ -21,9 +21,10 @@
 
   <!-- 核心计时器区域 -->
   <view class="timer-section">
-    <study-timer 
-      bind:timeUpdate="onTimeUpdate" 
+    <study-timer class="study-timer"
+      bind:timeUpdate="onTimeUpdate"
       bind:finish="onFinish"
+      bind:subjectChange="onSubjectChange"
       initialTime="{{initialTime}}"
       subject="{{subject}}">
     </study-timer>
