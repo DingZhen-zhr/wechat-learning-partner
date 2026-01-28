@@ -1,0 +1,5 @@
+<view class="timer-container">
+  <view class="subject-text">{{subject}}</view>
+  <view class="time-display">{{displayText}}</view>
+  <button>开始</button>
+</view>

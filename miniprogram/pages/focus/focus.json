@@ -1,0 +1,10 @@
+{
+  "usingComponents": {
+    "cloud-tip-modal": "/components/cloudTipModal/index",
+    "study-timer": "/components/study-timer/study-timer",
+    "partner-avatar": "/components/partner-avatar/partner-avatar"
+  },
+  "navigationBarTitleText": "专注学习",
+  "navigationBarBackgroundColor": "#F6F6F6",
+  "navigationBarTextStyle": "black"
+}

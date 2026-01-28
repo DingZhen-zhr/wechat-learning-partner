@@ -1,0 +1,3 @@
+<view class="avatar-wrapper">
+  <image class="avatar-image" src="{{avatarUrl}}" mode="aspectFill"></image>
+</view>

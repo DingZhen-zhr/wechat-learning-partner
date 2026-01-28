@@ -1,0 +1,7 @@
+.timer-container {
+  text-align: center;
+}
+.time-display {
+  font-size: 80rpx;
+  font-weight: bold;
+}

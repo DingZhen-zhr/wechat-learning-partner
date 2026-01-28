@@ -1,0 +1,60 @@
+{
+  "pages": [
+    "pages/focus/focus",
+    "pages/partner/partner",
+    "pages/homepage/homepage",
+    "pages/stuck/stuck",
+    "pages/progress/progress",
+    "pages/index/index",
+    "pages/example/index"
+  ],
+  "tabBar": {
+    "color": "#7A7E83",
+    "selectedColor": "#3cc51f",
+    "borderStyle": "black",
+    "backgroundColor": "#ffffff",
+    "position": "bottom",
+    "list": [
+      {
+        "pagePath": "pages/homepage/homepage",
+        "iconPath": "images/icons/home.png",
+        "selectedIconPath": "images/icons/home1.png",
+        "text": "主页"
+      },
+      {
+        "pagePath": "pages/focus/focus",
+        "iconPath": "images/icons/timer.png",
+        "selectedIconPath": "images/icons/timer1.png",
+        "text": "专注"
+      },
+      {
+        "pagePath": "pages/partner/partner",
+        "iconPath": "images/icons/partner.png",
+        "selectedIconPath": "images/icons/partner1.png",
+        "text": "搭子"
+      },
+      {
+        "pagePath": "pages/stuck/stuck",
+        "iconPath": "images/icons/askforhelp.png",
+        "selectedIconPath": "images/icons/askforhelp1.png",
+        "text": "求助"
+      },
+      {
+        "pagePath": "pages/progress/progress",
+        "iconPath": "images/icons/progress.png",
+        "selectedIconPath": "images/icons/progress1.png",
+        "text": "成果"
+      }
+    ]
+  },
+  "window": {
+    "backgroundColor": "#F6F6F6",
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#F6F6F6",
+    "navigationBarTitleText": "云开发 QuickStart",
+    "navigationBarTextStyle": "black"
+  },
+  "sitemapLocation": "sitemap.json",
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents"
+}

@@ -1,0 +1,62 @@
+<!-- pages/focus/focus.wxml -->
+<view class="focus-container">
+  <!-- 背景动画层 -->
+  <view class="background-glow"></view>
+
+  <!-- 顶部伙伴区域 -->
+  <view class="partner-section">
+    <partner-avatar avatarUrl="{{partnerAvatar}}" />
+    <!-- 优化后的互动气泡，包含反馈按钮 -->
+    <view class="bubble-wrapper {{ showBubble ? 'show' : '' }}">
+      <view class="bubble">
+        <text class="bubble-text">{{ bubbleText }}</text>
+        <image 
+          class="feedback-icon {{ heartBeat ? 'beat' : '' }}" 
+          src="/images/icons/heart-icon.png" 
+          bindtap="handleBubbleFeedback"
+        />
+      </view>
+    </view>
+  </view>
+
+  <!-- 核心计时器区域 -->
+  <view class="timer-section">
+    <study-timer 
+      bind:timeUpdate="onTimeUpdate" 
+      bind:finish="onFinish"
+      initialTime="{{initialTime}}"
+      subject="{{subject}}">
+    </study-timer>
+  </view>
+
+  <!-- 底部操作区域 -->
+  <view class="actions-section">
+    <!-- 使用 view 模拟按钮，以获得更好的自定义样式和点击效果 -->
+    <view class="action-button finish-button" hover-class="button-hover" bindtap="handleManualFinish">
+      <image class="button-icon" src="/images/icons/stop-icon.png"></image>
+      <text>提前结束</text>
+    </view>
+  </view>
+
+  <!-- 优化后的学习总结弹窗 -->
+  <view class="modal-mask" wx:if="{{showSummaryModal}}" catchtouchmove="preventTouchMove">
+    <view class="summary-modal animated">
+      <image class="modal-badge" src="/images/icons/badge-icon.png"></image>
+      <view class="modal-title">专注完成！</view>
+      <view class="modal-content">
+        <view class="summary-item">
+          <text class="item-label">学习科目</text>
+          <text class="item-value subject">{{ subject }}</text>
+        </view>
+        <view class="summary-item">
+          <text class="item-label">专注时长</text>
+          <text class="item-value duration">{{ finalStudyDuration }}</text>
+        </view>
+      </view>
+      <view class="modal-actions">
+        <button class="confirm-button" hover-class="button-hover-confirm" bindtap="closeSummaryModal">太棒了！</button>
+      </view>
+    </view>
+  </view>
+
+</view>
