@@ -1,0 +1,48 @@
+.greeting-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 30rpx 40rpx;
+  background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
+  border-radius: 20rpx;
+  box-shadow: 0 8rpx 20rpx rgba(102, 166, 255, 0.3);
+  transition: transform 0.2s ease-in-out;
+}
+
+.card-hover {
+  transform: scale(0.98);
+}
+
+.text-content {
+  flex: 1;
+  margin-right: 30rpx;
+}
+
+.greeting-text {
+  font-size: 28rpx;
+  color: #ffffff;
+  line-height: 1.6;
+  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
+}
+
+.avatar-container {
+  position: relative;
+}
+
+.partner-avatar {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  border: 4rpx solid rgba(255, 255, 255, 0.5);
+}
+
+.status-dot {
+  position: absolute;
+  bottom: 4rpx;
+  right: 4rpx;
+  width: 20rpx;
+  height: 20rpx;
+  background-color: #4cd964; /* 绿色，表示在线 */
+  border-radius: 50%;
+  border: 4rpx solid #ffffff;
+}

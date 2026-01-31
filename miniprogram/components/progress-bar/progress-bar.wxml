@@ -1,0 +1,5 @@
+<view class="progress-bar-container">
+  <view class="progress-bar-background">
+    <view class="progress-bar-inner" style="width: {{percentage}}%;"></view>
+  </view>
+</view>

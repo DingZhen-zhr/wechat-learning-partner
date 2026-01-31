@@ -1,0 +1,17 @@
+<!-- 根据任务状态 'status' 添加不同的 class -->
+<view class="plan-item-card {{status === 'done' ? 'done' : ''}}">
+  <view class="item-info">
+    <view class="subject-line">
+      <image class="subject-icon" src="/images/icons/{{status === 'done' ? 'check-circle' : 'book'}}.png" />
+      <text class="subject-text">{{subject}}</text>
+    </view>
+    <text class="duration-text">{{duration}} 分钟</text>
+  </view>
+  
+  <view class="item-action">
+    <!-- 点击按钮时，触发 'start' 事件通知父组件 -->
+    <button class="start-button" bindtap="onStartTap" disabled="{{status === 'done'}}">
+      {{status === 'done' ? '已完成' : '开始'}}
+    </button>
+  </view>
+</view>

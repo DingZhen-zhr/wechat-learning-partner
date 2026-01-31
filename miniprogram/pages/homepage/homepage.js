@@ -1,606 +1,291 @@
-// pages/exampleDetail/index.js
+// pages/homepage/homepage.js
+const app = getApp();
+
 Page({
   data: {
-    type: "",
-    envId: "",
-    showTip: false,
-    title: "",
-    content: "",
+    // --- 搭子问候相关 ---
+    aiGreetingText: '正在加载问候语...',
+    partnerAvatar: '/images/icons/doubao.png', // 建议使用本地图片，更稳定
 
-    haveGetOpenId: false,
-    openId: "",
+    // --- 学习概览相关 ---
+    todayLearnedDuration: '0h 0m',
+    planCompletionRate: 0,
 
-    haveGetCodeSrc: false,
-    codeSrc: "",
+    // --- 计划列表相关 ---
+    planList: [], // 页面加载时会从缓存读取
 
-    haveGetRecord: false,
-    record: [],
+    // --- 控制添加任务弹窗 ---
+    showAddPlanModal: false,
+    newPlanSubject: '',
+    newPlanDuration: '',
 
-    haveGetImgSrc: false,
-    imgSrc: "",
-
-    // ai
-    modelConfig: {
-      modelProvider: "deepseek", // 大模型服务厂商
-      quickResponseModel: "deepseek-v3", // 快速响应模型 （混元 turbo, gpt4 turbo版，deepseek v3等）
-      logo: "https://cloudcache.tencent-cloud.com/qcloud/ui/static/static_source_business/2339414f-2c0d-4537-9618-1812bd14f4af.svg", // model 头像
-      welcomeMsg: "我是deepseek-v3，很高兴见到你！", // model 欢迎语
-    },
-    callcbrCode: "",
-    initEnvCode: "",
-    callOpenIdCode: "",
-    callMiniProgramCode: "",
-    callFunctionCode: "",
-    callCreateCollectionCode: "",
-    callUploadFileCode: "",
-
-    showInsertModal: false,
-    insertRegion: "",
-    insertCity: "",
-    insertSales: "",
-
-    haveGetCallContainerRes: false,
-    callContainerResStr: "",
-
-    ai_page_config: `{
-  "usingComponents": {
-    "agent-ui":"/components/agent-ui/index"
-  },
-}`,
-    ai_wxml_config: `&lt;agent-ui agentConfig="{{agentConfig}}" showBotAvatar="{{showBotAvatar}}" chatMode="{{chatMode}}" modelConfig="{{modelConfig}}""&gt;&lt;/agent-ui&gt;`,
-    ai_data_config: `data: {
-  chatMode: "bot", // bot 表示使用agent，model 表示使用大模型
-  showBotAvatar: true, // 是否在对话框左侧显示头像
-  agentConfig: {
-    botId: "your agent id", // agent id,
-    allowWebSearch: true, // 允许客户端选择展示联网搜索按钮
-    allowUploadFile: true, // 允许客户端展示上传文件按钮
-    allowPullRefresh: true, // 允许客户端展示下拉刷新
-    allowUploadImage: true, // 允许客户端展示上传图片按钮
-    allowMultiConversation: true, // 允许客户端展示查看会话列表/新建会话按钮
-    showToolCallDetail: true, // 是否展示 mcp server toolCall 细节
-    allowVoice: true, // 允许客户端展示语音按钮
-    showBotName: true, // 允许展示bot名称
-  },
-  modelConfig: {
-    modelProvider: "hunyuan-open", // 大模型服务厂商
-    quickResponseModel: "hunyuan-lite", // 大模型名称
-    logo: "", // model 头像
-    welcomeMsg: "欢迎语", // model 欢迎语
-  },
-}`,
-
-    // AI 场景示例数据
-    aiScenarios: [
-      {
-        title: "💡 智能代码生成与补全",
-        examples: [
-          "帮我创建一个商品列表页面,包含图片、标题、价格和加入购物车按钮",
-          "帮我完善这个函数,实现商品搜索功能",
-        ],
-      },
-      {
-        title: "🔧 代码优化与重构建议",
-        examples: [
-          "优化这段代码的性能,减少不必要的渲染",
-          "完善云函数调用的错误处理代码",
-        ],
-      },
-    ],
+    // --- 用于手动滑动删除 ---
+    touchStartX: 0, // 记录触摸起始位置的X坐标
+    touchStartY: 0, // 记录触摸起始位置的Y坐标
+    deleteThreshold: -160, // 滑动阈值, 与 wxss 中 .delete-action 的宽度一致
   },
 
+  /**
+   * 页面加载时，只在第一次进入时执行
+   */
   onLoad(options) {
-    if (
-      options.type === "cloudbaserunfunction" ||
-      options.type === "cloudbaserun"
-    ) {
-      this.getCallcbrCode();
-    }
-    if (options.type === "getOpenId") {
-      this.getOpenIdCode();
-    }
-    if (options.type === "getMiniProgramCode") {
-      this.getMiniProgramCode();
-    }
-
-    if (options.type === "createCollection") {
-      this.getCreateCollectionCode();
-    }
-
-    if (options.type === "uploadFile") {
-      this.getUploadFileCode();
-    }
-    this.setData({ type: options?.type, envId: options?.envId });
+    this.loadPlanList();
+    this.getAIGreeting();
+    this.updateTodaySummary();
   },
 
-  copyUrl() {
-    wx.setClipboardData({
-      data: "https://gitee.com/TencentCloudBase/cloudbase-agent-ui/tree/main/apps/miniprogram-agent-ui/miniprogram/components/agent-ui",
-      success: function (res) {
-        wx.showToast({
-          title: "复制成功",
-          icon: "success",
-        });
-      },
-    });
+  /**
+   * 页面显示时，每次切到该页或从其他页返回时都会执行
+   */
+  onShow() {
+    this.loadPlanList();
+    this.updateTodaySummary();
+
+    // 检查并处理从 focus 页面通过全局变量回传的学习记录
+    if (app && app.globalData && app.globalData.lastStudyRecord) {
+      this.handleStudyRecord(app.globalData.lastStudyRecord);
+      // 处理完后立即清空，这是非常重要的一步，防止重复处理
+      app.globalData.lastStudyRecord = null; 
+    }
   },
 
-  copyPluginName() {
-    wx.setClipboardData({
-      data: "微信云开发 AI ToolKit",
-      success: function (res) {
-        wx.showToast({
-          title: "复制成功",
-          icon: "success",
-        });
-      },
-    });
-  },
-
-  copyPrompt(e) {
-    const prompt = e.currentTarget.dataset.prompt;
-    wx.setClipboardData({
-      data: prompt,
-      success: function (res) {
-        wx.showToast({
-          title: "复制成功",
-          icon: "success",
-        });
-      },
-    });
-  },
-
-  insertRecord() {
+  /**
+   * 从本地缓存加载计划列表
+   */
+  loadPlanList() {
+    let planList = wx.getStorageSync('planList') || [];
+    // 为每个任务项初始化滑动所需的 x 坐标和 isDeleting 状态
+    planList.forEach(item => {
+      item.x = 0;
+      item.isDeleting = false;
+    }); 
     this.setData({
-      showInsertModal: true,
-      insertRegion: "",
-      insertCity: "",
-      insertSales: "",
+      planList: planList
     });
   },
 
-  deleteRecord(e) {
-    // 调用云函数删除记录
-    wx.showLoading({
-      title: "删除中...",
-    });
-    wx.cloud
-      .callFunction({
-        name: "quickstartFunctions",
-        data: {
-          type: "deleteRecord",
-          data: {
-            _id: e.currentTarget.dataset.id,
-          },
-        },
-      })
-      .then((resp) => {
-        wx.showToast({
-          title: "删除成功",
-        });
-        this.getRecord(); // 刷新列表
-        wx.hideLoading();
-      })
-      .catch((e) => {
-        wx.showToast({
-          title: "删除失败",
-          icon: "none",
-        });
-        wx.hideLoading();
-      });
+  /**
+   * 获取 AI 问候语
+   */
+  getAIGreeting() {
+    this.setData({ aiGreetingText: '搭子正在思考中...' });
+    setTimeout(() => {
+      const hour = new Date().getHours();
+      let timeOfDayGreeting;
+      if (hour < 6) timeOfDayGreeting = "凌晨好，熬夜辛苦了！";
+      else if (hour < 12) timeOfDayGreeting = "早上好！新的一天，元气满满！";
+      else if (hour < 18) timeOfDayGreeting = "下午好！";
+      else timeOfDayGreeting = "晚上好！";
+      
+      const nextPlan = this.data.planList.find(p => p.status === 'pending');
+      let planGreeting = "今天还没有计划哦，快来制定一个吧！";
+      if (nextPlan) {
+        planGreeting = `今天的第一个任务是“${nextPlan.subject}”，一起加油吧！`;
+      }
+      this.setData({ aiGreetingText: `${timeOfDayGreeting} ${planGreeting}` });
+    }, 1500);
   },
 
-  // 输入框事件
-  onInsertRegionInput(e) {
-    this.setData({ insertRegion: e.detail.value });
-  },
-  onInsertCityInput(e) {
-    this.setData({ insertCity: e.detail.value });
-  },
-  onInsertSalesInput(e) {
-    this.setData({ insertSales: e.detail.value });
-  },
-  // 取消弹窗
-  onInsertCancel() {
-    this.setData({ showInsertModal: false });
-  },
-
-  // 确认插入
-  async onInsertConfirm() {
-    const { insertRegion, insertCity, insertSales } = this.data;
-    if (!insertRegion || !insertCity || !insertSales) {
-      wx.showToast({ title: "请填写完整信息", icon: "none" });
+  /**
+   * 更新今日学习概览 (按任务数量计算)
+   */
+  updateTodaySummary() {
+    const todayRecords = wx.getStorageSync('todayRecords') || [];
+    let totalSeconds = todayRecords.reduce((sum, record) => sum + (record.duration || 0), 0);
+    
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    this.setData({ todayLearnedDuration: `${hours}h ${minutes}m` });
+    
+    const { planList } = this.data;
+    if (!planList || planList.length === 0) {
+      this.setData({ planCompletionRate: 0 });
       return;
     }
-    wx.showLoading({ title: "插入中..." });
-    try {
-      await wx.cloud.callFunction({
-        name: "quickstartFunctions",
-        data: {
-          type: "insertRecord",
-          data: {
-            region: insertRegion,
-            city: insertCity,
-            sales: Number(insertSales),
-          },
-        },
+
+    const totalPlans = planList.length;
+    const donePlans = planList.filter(p => p.status === 'done').length;
+    let rate = (totalPlans > 0) ? Math.round((donePlans / totalPlans) * 100) : 0;
+    this.setData({ planCompletionRate: rate });
+  },
+
+  /**
+   * 点击开始按钮，跳转到专注页面
+   */
+  startFocus(e) {
+    const item = e.currentTarget.dataset.item;
+    if (!item) { return; }
+    if (item.status === 'done') {
+      wx.showToast({ title: '这个任务已经完成啦', icon: 'none' });
+      return;
+    }
+    
+    // 使用全局变量为 tabBar 页面传参
+    if (app && app.globalData) {
+      app.globalData.pendingFocusParams = {
+        id: item.id,
+        subject: item.subject,
+        duration: item.duration
+      };
+    }
+    wx.switchTab({ url: '/pages/focus/focus' });
+  },
+
+  /**
+   * 处理从 focus 页面返回的学习记录
+   */
+  handleStudyRecord(record) {
+    if (!record || typeof record.duration !== 'number' || typeof record.id === 'undefined') {
+      return;
+    }
+
+    const todayRecords = wx.getStorageSync('todayRecords') || [];
+    if (!todayRecords.some(r => r.id === record.id)) {
+        todayRecords.push(record);
+        wx.setStorageSync('todayRecords', todayRecords);
+    }
+
+    const planList = this.data.planList;
+    const planIndex = planList.findIndex(p => p.id === record.id);
+    if (planIndex !== -1 && planList[planIndex].status !== 'done') {
+        planList[planIndex].status = 'done';
+        this.setData({ planList });
+        wx.setStorageSync('planList', planList);
+        this.updateTodaySummary(); 
+    }
+  },
+  
+  onGreetingCardTap() {
+    wx.showToast({ title: '搭子给你打气啦！加油！', icon: 'none' });
+  },
+
+  /**
+   * 打开添加任务的弹窗
+   */
+  openAddPlanModal() {
+    this.setData({ showAddPlanModal: true, newPlanSubject: '', newPlanDuration: '' });
+  },
+
+  /**
+   * 关闭添加任务的弹窗
+   */
+  closeAddPlanModal() {
+    this.setData({ showAddPlanModal: false });
+  },
+
+  preventModalClose() {},
+  onSubjectInput(e) { this.setData({ newPlanSubject: e.detail.value }); },
+  onDurationInput(e) { this.setData({ newPlanDuration: e.detail.value }); },
+  
+  /**
+   * 处理“确认添加”按钮的点击事件
+   */
+  handleAddNewPlan() {
+    const { newPlanSubject, newPlanDuration, planList } = this.data;
+    if (!newPlanSubject.trim() || !parseInt(newPlanDuration) > 0) {
+      wx.showToast({ title: '请填写有效信息', icon: 'none' });
+      return;
+    }
+    const newPlan = { 
+      id: Date.now(), 
+      subject: newPlanSubject, 
+      duration: parseInt(newPlanDuration), 
+      status: 'pending', 
+      x: 0, // 用于滑动删除的x坐标
+      isDeleting: false // 用于删除动画
+    };
+    const updatedPlanList = [newPlan, ...planList];
+    this.setData({ planList: updatedPlanList });
+    wx.setStorageSync('planList', updatedPlanList);
+    this.closeAddPlanModal();
+    wx.showToast({ title: '添加成功！', icon: 'success' });
+    this.updateTodaySummary();
+  },
+
+  /**
+   * 手动滑动删除系列函数
+   */
+  onTouchStart(e) {
+    const index = e.currentTarget.dataset.index;
+    // 关闭其他所有已打开的滑块
+    this.data.planList.forEach((item, i) => {
+      if (i !== index) item.x = 0;
+    });
+    this.setData({
+      planList: this.data.planList,
+      touchStartX: e.touches[0].clientX,
+      touchStartY: e.touches[0].clientY
+    });
+  },
+
+  onTouchMove(e) {
+    const index = e.currentTarget.dataset.index;
+    const moveX = e.touches[0].clientX;
+    const moveY = e.touches[0].clientY;
+    const deltaX = moveX - this.data.touchStartX;
+    const deltaY = moveY - this.data.touchStartY;
+
+    // 如果垂直滑动距离大于水平滑动距离，则判断为页面滚动，不进行水平滑动
+    if (Math.abs(deltaY) > Math.abs(deltaX)) {
+      return;
+    }
+    
+    // 只允许左滑
+    if (deltaX < 0) {
+      const newX = Math.max(deltaX, this.data.deleteThreshold);
+      this.data.planList[index].x = newX;
+      this.setData({
+        planList: this.data.planList
       });
-      wx.showToast({ title: "插入成功" });
-      this.setData({ showInsertModal: false });
-      this.getRecord(); // 刷新列表
-    } catch (e) {
-      wx.showToast({ title: "插入失败", icon: "none" });
-      console.error(e);
-    } finally {
-      wx.hideLoading();
     }
   },
 
-  getOpenId() {
-    wx.showLoading({
-      title: "",
-    });
-    wx.cloud
-      .callFunction({
-        name: "quickstartFunctions",
-        data: {
-          type: "getOpenId",
-        },
-      })
-      .then((resp) => {
-        this.setData({
-          haveGetOpenId: true,
-          openId: resp.result.openid,
-        });
-        wx.hideLoading();
-      })
-      .catch((e) => {
-        wx.hideLoading();
-        const { errCode, errMsg } = e;
-        if (errMsg.includes("Environment not found")) {
-          this.setData({
-            showTip: true,
-            title: "云开发环境未找到",
-            content:
-              "如果已经开通云开发，请检查环境ID与 `miniprogram/app.js` 中的 `env` 参数是否一致。",
-          });
-          return;
-        }
-        if (errMsg.includes("FunctionName parameter could not be found")) {
-          this.setData({
-            showTip: true,
-            title: "请上传云函数",
-            content:
-              "在'cloudfunctions/quickstartFunctions'目录右键，选择【上传并部署-云端安装依赖】，等待云函数上传完成后重试。",
-          });
-          return;
-        }
-      });
-  },
-
-  clearOpenId() {
-    this.setData({
-      haveGetOpenId: false,
-      openId: "",
-    });
-  },
-
-  clearCallContainerRes() {
-    this.setData({
-      haveGetCallContainerRes: false,
-      callContainerResStr: "",
-    });
-  },
-
-  getCodeSrc() {
-    wx.showLoading({
-      title: "",
-    });
-    wx.cloud
-      .callFunction({
-        name: "quickstartFunctions",
-        data: {
-          type: "getMiniProgramCode",
-        },
-      })
-      .then((resp) => {
-        this.setData({
-          haveGetCodeSrc: true,
-          codeSrc: resp.result,
-        });
-        wx.hideLoading();
-      })
-      .catch((e) => {
-        wx.hideLoading();
-        console.error(e);
-        const { errCode, errMsg } = e;
-        if (errMsg.includes("Environment not found")) {
-          this.setData({
-            showTip: true,
-            title: "云开发环境未找到",
-            content:
-              "如果已经开通云开发，请检查环境ID与 `miniprogram/app.js` 中的 `env` 参数是否一致。",
-          });
-          return;
-        }
-        if (errMsg.includes("FunctionName parameter could not be found")) {
-          this.setData({
-            showTip: true,
-            title: "请上传云函数",
-            content:
-              "在'cloudfunctions/quickstartFunctions'目录右键，选择【上传并部署-云端安装依赖】，等待云函数上传完成后重试。",
-          });
-          return;
-        }
-      });
-  },
-
-  clearCodeSrc() {
-    this.setData({
-      haveGetCodeSrc: false,
-      codeSrc: "",
-    });
-  },
-
-  bindInput(e) {
+  onTouchEnd(e) {
     const index = e.currentTarget.dataset.index;
-    const record = this.data.record;
-    record[index].sales = Number(e.detail.value);
+    const currentX = this.data.planList[index].x;
+    const threshold = this.data.deleteThreshold / 2;
+
+    this.data.planList[index].x = currentX < threshold ? this.data.deleteThreshold : 0;
     this.setData({
-      record,
+      planList: this.data.planList
     });
   },
 
-  getRecord() {
-    wx.showLoading({
-      title: "",
-    });
-    wx.cloud
-      .callFunction({
-        name: "quickstartFunctions",
-        data: {
-          type: "selectRecord",
-        },
-      })
-      .then((resp) => {
-        this.setData({
-          haveGetRecord: true,
-          record: resp.result.data,
-        });
-        wx.hideLoading();
-      })
-      .catch((e) => {
-        this.setData({
-          showTip: true,
-        });
-        wx.hideLoading();
-        console.error(e);
-      });
-  },
+  handleDeletePlan(e) {
+    const idToDelete = e.currentTarget.dataset.id;
+    
+    wx.showModal({
+      title: '确认删除',
+      content: '确定要删除这个计划吗？',
+      confirmColor: '#e53935',
+      success: (res) => {
+        if (res.confirm) {
+          const index = this.data.planList.findIndex(item => item.id === idToDelete);
+          if (index > -1) {
+            // 触发删除动画
+            this.data.planList[index].isDeleting = true;
+            this.setData({ planList: this.data.planList });
 
-  clearRecord() {
-    this.setData({
-      haveGetRecord: false,
-      record: [],
-    });
-  },
-  updateRecord() {
-    wx.showLoading({
-      title: "",
-    });
-    wx.cloud
-      .callFunction({
-        name: "quickstartFunctions",
-        data: {
-          type: "updateRecord",
-          data: this.data.record,
-        },
-      })
-      .then((resp) => {
-        wx.showToast({
-          title: "更新成功",
-        });
-        wx.hideLoading();
-      })
-      .catch((e) => {
-        console.log(e);
-        this.setData({
-          showUploadTip: true,
-        });
-        wx.hideLoading();
-      });
-  },
-
-  uploadImg() {
-    wx.showLoading({
-      title: "",
-    });
-    // 让用户选择一张图片
-    wx.chooseMedia({
-      count: 1,
-      success: (chooseResult) => {
-        // 将图片上传至云存储空间
-        wx.cloud
-          .uploadFile({
-            // 指定上传到的云路径
-            cloudPath: `my-photo-${new Date().getTime()}.png`,
-            // 指定要上传的文件的小程序临时文件路径
-            filePath: chooseResult.tempFiles[0].tempFilePath,
-          })
-          .then((res) => {
+            // 动画结束后再真正从数据中删除
+            setTimeout(() => {
+              const updatedPlanList = this.data.planList.filter(item => item.id !== idToDelete);
+              this.setData({ planList: updatedPlanList });
+              wx.setStorageSync('planList', updatedPlanList);
+              this.updateTodaySummary();
+              wx.showToast({ title: '删除成功', icon: 'none' });
+            }, 300); // 动画时长应与 wxss 中 transition 时间一致
+          }
+        } else {
+          // 用户取消，将滑块归位
+          const index = this.data.planList.findIndex(item => item.id === idToDelete);
+          if (index > -1) {
+            this.data.planList[index].x = 0;
             this.setData({
-              haveGetImgSrc: true,
-              imgSrc: res.fileID,
+              planList: this.data.planList
             });
-          })
-          .catch((e) => {
-            console.log("e", e);
-          });
-      },
-      complete: () => {
-        wx.hideLoading();
-      },
+          }
+        }
+      }
     });
-  },
-
-  clearImgSrc() {
-    this.setData({
-      haveGetImgSrc: false,
-      imgSrc: "",
-    });
-  },
-
-  goOfficialWebsite() {
-    const url = "https://docs.cloudbase.net/toolbox/quick-start";
-    wx.navigateTo({
-      url: `../web/index?url=${url}`,
-    });
-  },
-  runCallContainer: async function () {
-    const app = getApp();
-    console.log("globalData", app.globalData);
-    const c1 = new wx.cloud.Cloud({
-      resourceEnv: app.globalData.env,
-    });
-    await c1.init();
-    const r = await c1.callContainer({
-      path: "/api/users", // 填入业务自定义路径
-      header: {
-        "X-WX-SERVICE": "express-test", // 填入服务名称
-      },
-      // 其余参数同 wx.request
-      method: "GET",
-    });
-    console.log(r);
-    this.setData({
-      haveGetCallContainerRes: true,
-      callContainerResStr: `${JSON.stringify(r.data.items, null, 2)}`,
-    });
-  },
-  getCallcbrCode: function () {
-    const app = getApp();
-    this.setData({
-      callcbrCode: `const c1 = new wx.cloud.Cloud({
-  resourceEnv: ${app.globalData.env}
-})
-await c1.init()
-const r = await c1.callContainer({
-  path: '/api/users', // 此处填入业务自定义路径， /api/users 为示例路径
-  header: {
-    'X-WX-SERVICE': 'express-test', // 填入业务服务名称，express-test 为示例服务
-  },
-  // 其余参数同 wx.request
-  method: 'GET',
-})`,
-    });
-  },
-  getInitEnvCode: function () {
-    const app = getApp();
-    this.setData({
-      initEnvCode: `wx.cloud.init({
-  env: ${app.globalData.env},
-  traceUser: true,
-});`,
-    });
-  },
-  getCreateCollectionCode: function () {
-    this.setData({
-      callCreateCollectionCode: `const cloud = require('wx-server-sdk');
-cloud.init({
-  env: cloud.DYNAMIC_CURRENT_ENV
-});
-const db = cloud.database();
-// 创建集合云函数入口函数
-exports.main = async (event, context) => {
-  try {
-    // 创建集合
-    await db.createCollection('sales');
-    return {
-      success: true
-    };
-  } catch (e) {
-    return {
-      success: true,
-      data: 'create collection success'
-    };
   }
-};`,
-    });
-  },
-  getOpenIdCode: function () {
-    this.setData({
-      callOpenIdCode: `const cloud = require('wx-server-sdk');
-cloud.init({
-  env: cloud.DYNAMIC_CURRENT_ENV
-});
-// 获取openId云函数入口函数
-exports.main = async (event, context) => {
-  // 获取基础信息
-  const wxContext = cloud.getWXContext();
-  return {
-    openid: wxContext.OPENID,
-    appid: wxContext.APPID,
-    unionid: wxContext.UNIONID,
-  };
-};`,
-      callFunctionCode: `wx.cloud.callFunction({
-  name: 'quickstartFunctions',
-  data: {
-    type: 'getOpenId'
-  }
-}).then((resp) => console.log(resp))`,
-    });
-  },
-  getMiniProgramCode: function () {
-    this.setData({
-      callMiniProgramCode: `const cloud = require('wx-server-sdk');
-cloud.init({
-  env: cloud.DYNAMIC_CURRENT_ENV
-});
-// 获取小程序二维码云函数入口函数
-exports.main = async (event, context) => {
-  // 获取小程序二维码的buffer
-  const resp = await cloud.openapi.wxacode.get({
-    path: 'pages/index/index'
-  });
-  const { buffer } = resp;
-  // 将图片上传云存储空间
-  const upload = await cloud.uploadFile({
-    cloudPath: 'code.png',
-    fileContent: buffer
-  });
-  return upload.fileID;
-};
-`,
-      callFunctionCode: `wx.cloud.callFunction({
-  name: 'quickstartFunctions',
-  data: {
-    type: 'getMiniProgramCode'
-  }
-}).then((resp) => console.log(resp))`,
-    });
-  },
-  getUploadFileCode: function () {
-    this.setData({
-      callUploadFileCode: `wx.chooseMedia({
-count: 1,
-success: (chooseResult) => {
-  // 将图片上传至云存储空间
-  wx.cloud
-    .uploadFile({
-      // 指定上传到的云路径
-      cloudPath: "my-photo.png",
-      // 指定要上传的文件的小程序临时文件路径
-      filePath: chooseResult.tempFiles[0].tempFilePath,
-    })
-    .then((res) => {
-      console.log(res)
-    })
-    .catch((e) => {
-      console.log('e', e)
-    });
-}
-});`,
-    });
-  },
 });

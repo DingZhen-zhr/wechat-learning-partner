@@ -1,0 +1,70 @@
+.plan-item-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 30rpx;
+  background-color: #f7f8fa;
+  border-radius: 20rpx;
+  transition: all 0.3s ease;
+}
+
+/* 完成状态的样式 */
+.plan-item-card.done {
+  background-color: #e8f5e9; /* 淡绿色背景 */
+}
+
+.plan-item-card.done .subject-text {
+  text-decoration: line-through;
+  color: #999;
+}
+
+.item-info {
+  flex: 1;
+  margin-right: 20rpx;
+  overflow: hidden;
+}
+
+.subject-line {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10rpx;
+}
+
+.subject-icon {
+  width: 32rpx;
+  height: 32rpx;
+  margin-right: 15rpx;
+}
+
+.subject-text {
+  font-size: 32rpx;
+  color: #333;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.duration-text {
+  font-size: 24rpx;
+  color: #888;
+  margin-left: 47rpx; /* 与图标+间距对齐 */
+}
+
+.item-action .start-button {
+  padding: 0 40rpx;
+  height: 60rpx;
+  line-height: 60rpx;
+  font-size: 28rpx;
+  border-radius: 30rpx;
+  background-color: #007aff;
+  color: #ffffff;
+  margin: 0;
+}
+
+/* 按钮禁用（已完成）时的样式 */
+.item-action .start-button[disabled] {
+  background-color: #c8e6c9;
+  color: #4caf50;
+  border: none;
+}

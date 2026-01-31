@@ -32,6 +32,7 @@ Page({
 
     // --- 新增的“专注学习”功能数据 ---
     subject: '未知科目',
+    planId: null,
     initialTime: 25 * 60,
     partnerAvatar: '/images/icons/doubao.png',
     showBubble: false,
@@ -61,8 +62,29 @@ Page({
     if (options.duration) {
       this.setData({ initialTime: parseInt(options.duration) * 60 });
     }
+    if (options.id) {
+      // 保存计划 id 以便结束时回传，注意 URL 参数为字符串，需要转为数值
+      this.setData({ planId: parseInt(options.id) });
+    }
+
+    // 如果从 tab 页面切换过来（switchTab），会通过 app.globalData.pendingFocusParams 传参
+    if (app && app.globalData && app.globalData.pendingFocusParams) {
+      const p = app.globalData.pendingFocusParams;
+      console.log('[focus] got pendingFocusParams from globalData:', p);
+      if (p.subject) this.setData({ subject: p.subject });
+      if (p.duration) this.setData({ initialTime: parseInt(p.duration) * 60 });
+      if (p.id) this.setData({ planId: p.id });
+      app.globalData.pendingFocusParams = null;
+    }
+
     // 启动专注模式下的搭子互动气泡
     this.startBubbleTimer();
+
+    // 初始化去重标志
+    this._sentStudyRecord = false;
+
+    // 如果通过 URL 或 globalData 设置了初始参数，尝试自动开始计时
+    this._maybeAutoStartTimer();
 
     // --- 保留：原有模板的 onLoad 逻辑 ---
     if (options?.type) {
@@ -82,6 +104,20 @@ Page({
       if (options.type === "uploadFile") {
         this.getUploadFileCode();
       }
+    }
+  },
+
+  onShow() {
+    // 每次切回专注页，检查是否有通过 globalData 传来的待启动参数
+    if (app && app.globalData && app.globalData.pendingFocusParams) {
+      const p = app.globalData.pendingFocusParams;
+      console.log('[focus] onShow got pendingFocusParams:', p);
+      if (p.subject) this.setData({ subject: p.subject });
+      if (p.duration) this.setData({ initialTime: parseInt(p.duration) * 60 });
+      if (p.id) this.setData({ planId: p.id });
+      app.globalData.pendingFocusParams = null;
+      // 设置完数据后尝试自动开始计时
+      this._maybeAutoStartTimer();
     }
   },
 
@@ -107,6 +143,31 @@ Page({
       }, 5000); // 5秒后消失
     }, bubbleInterval);
     this.setData({ bubbleTimer: timer });
+  },
+
+  // 如果页面接收到了待启动参数，则尝试启动计时器
+  _maybeAutoStartTimer() {
+    const secs = Number(this.data.initialTime) || 0;
+    if (!secs || secs <= 0) return;
+    const timerComp = this.selectComponent('.study-timer');
+    if (!timerComp) {
+      console.warn('[focus] study-timer 组件未找到，无法自动开始');
+      return;
+    }
+    // 如果计时器已在运行，则无需再次启动
+    if (timerComp.data && timerComp.data.running) {
+      console.log('[focus] study-timer 已在运行，跳过自动开始');
+      return;
+    }
+    console.log('[focus] 自动开始计时器，秒数：', secs);
+    // 确保属性已经绑定并生效后再启动
+    setTimeout(() => {
+      try {
+        timerComp.startTimer();
+      } catch (err) {
+        console.error('[focus] 启动计时器失败：', err);
+      }
+    }, 50);
   },
 
   onTimeUpdate(e) {
@@ -146,7 +207,13 @@ Page({
   closeSummaryModal() {
     this.setData({ showSummaryModal: false });
     this.updatePlanProgress();
-    wx.navigateBack();
+    // 如果页面堆栈中有历史页面，优先返回；否则说明本页是 tabBar 页面，使用 switchTab 跳回首页
+    const pages = getCurrentPages() || [];
+    if (pages.length > 1) {
+      wx.navigateBack();
+    } else {
+      wx.switchTab({ url: '/pages/homepage/homepage' });
+    }
   },
 
   formatDuration(seconds) {
@@ -157,23 +224,65 @@ Page({
   },
 
   updatePlanProgress() {
+    // 防止重复上报
+    if (this._sentStudyRecord) {
+      console.log('[focus] updatePlanProgress: 已上报过该学习记录，跳过');
+      return;
+    }
+
+    const record = {
+      id: this.data.planId,
+      subject: this.data.subject,
+      duration: this.data.totalSecondsStudied,
+      time: Date.now()
+    };
+
+    // 1) 写入本地缓存 todayRecords（持久化，便于首页随时读取）
+    try {
+      const todayRecords = wx.getStorageSync('todayRecords') || [];
+      // 去重：如果已存在相同 id + duration 的记录，则视为重复
+      const exists = todayRecords.some(r => r.id === record.id && r.duration === record.duration);
+      if (!exists) {
+        todayRecords.push(record);
+        wx.setStorageSync('todayRecords', todayRecords);
+        console.log('[focus] 已将学习记录写入本地缓存 todayRecords', record);
+      } else {
+        console.log('[focus] 本地缓存已存在类似记录，跳过写入');
+      }
+    } catch (err) {
+      console.error('[focus] 写入 todayRecords 失败：', err);
+    }
+
+    // 2) 更新本地的 planList 状态为 done（确保计划状态持久化）
+    try {
+      const planList = wx.getStorageSync('planList') || [];
+      const idx = planList.findIndex(p => p.id === record.id);
+      if (idx !== -1) {
+        planList[idx].status = 'done';
+        wx.setStorageSync('planList', planList);
+        console.log('[focus] 已更新本地 planList，标记为完成，id=', record.id);
+      }
+    } catch (err) {
+      console.error('[focus] 更新 planList 失败：', err);
+    }
+
+    // 3) 通过 EventChannel 或全局变量回传给首页
     const eventChannel = this.getOpenerEventChannel();
     if (eventChannel && eventChannel.emit) {
-      eventChannel.emit('acceptStudyRecord', {
-        subject: this.data.subject,
-        duration: this.data.totalSecondsStudied
-      });
-      console.log('学习记录已通过EventChannel发送');
+      eventChannel.emit('acceptStudyRecord', record);
+      console.log('[focus] 学习记录已通过 EventChannel 发送', record);
     } else {
-      console.warn('无法获取 EventChannel，学习记录将保存至全局变量');
+      console.warn('[focus] 无法获取 EventChannel，学习记录将保存至全局变量');
       if (!app.globalData.studyRecords) {
         app.globalData.studyRecords = [];
       }
-      app.globalData.studyRecords.push({
-        subject: this.data.subject,
-        duration: this.data.totalSecondsStudied
-      });
+      app.globalData.studyRecords.push(record);
+      app.globalData.lastStudyRecord = record;
+      console.log('[focus] 已保存为 globalData.lastStudyRecord', record);
     }
+
+    // 标记为已上报，防止重复上报
+    this._sentStudyRecord = true;
   },
 
 

@@ -1,0 +1,9 @@
+<view class="greeting-card" hover-class="card-hover">
+  <view class="text-content">
+    <text class="greeting-text">{{ greetingText }}</text>
+  </view>
+  <view class="avatar-container">
+    <image class="partner-avatar" src="{{partnerAvatar}}" mode="aspectFill" />
+    <view class="status-dot"></view>
+  </view>
+</view>

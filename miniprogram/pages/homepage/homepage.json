@@ -1,5 +1,10 @@
 {
   "usingComponents": {
-    "cloud-tip-modal": "/components/cloudTipModal/index"
-  }
+    "greeting-card": "/components/greeting-card/greeting-card",
+    "progress-bar": "/components/progress-bar/progress-bar",
+    "plan-item": "/components/plan-item/plan-item"
+  },
+  "navigationBarTitleText": "我的待办",
+  "navigationBarBackgroundColor": "#f7f8fa",
+  "navigationBarTextStyle": "black"
 }
