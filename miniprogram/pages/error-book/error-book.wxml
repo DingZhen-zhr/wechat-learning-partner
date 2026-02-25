@@ -1,0 +1,175 @@
+<!-- pages/error-book/error-book.wxml -->
+<view class="container">
+
+  <!-- ============================== -->
+  <!-- 1. 科目分类视图 (首页) -->
+  <!-- ============================== -->
+  <view class="subject-view" wx:if="{{!currentSubject && !isEditing}}">
+    <view class="header">
+      <text class="title">我的错题集</text>
+      <text class="subtitle">分类整理，AI 助攻</text>
+    </view>
+    
+    <view class="grid-container">
+      <!-- 科目列表 -->
+      <view class="folder-card" wx:for="{{categories}}" wx:key="*this" bindtap="enterSubject" data-subject="{{item}}">
+        <image class="folder-icon" src="/images/icons/folder.png" />
+        <text class="folder-name">{{item}}</text>
+        <text class="folder-count">{{categoryCounts[item] || 0}} 题</text>
+      </view>
+
+      <!-- 添加科目按钮 -->
+      <view class="folder-card add-btn" bindtap="handleAddCategory">
+        <image class="add-icon" src="/images/icons/plus-circle.png" />
+        <text class="folder-name">新建科目</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- ============================== -->
+  <!-- 2. 题目列表视图 (进入某科目) -->
+  <!-- ============================== -->
+  <view class="list-view" wx:if="{{currentSubject && !isEditing}}">
+    <!-- 顶部导航 -->
+    <view class="nav-header">
+      <view class="back-btn" bindtap="backToCategories">
+        <image src="/images/icons/back.png" />
+        <text>返回</text>
+      </view>
+      <text class="current-subject">{{currentSubject}}</text>
+      <view class="placeholder"></view> <!-- 占位用，保持标题居中 -->
+    </view>
+
+    <scroll-view scroll-y="true" class="problem-scroll">
+      <block wx:if="{{currentList.length > 0}}">
+        <view class="problem-card" wx:for="{{currentList}}" wx:key="id">
+          
+          <!-- 题干图片区域 -->
+          <view class="card-header" bindtap="toggleExpand" data-id="{{item.id}}">
+            <view class="tag">错题</view>
+            <text class="date">{{item.date}}</text>
+            <image class="expand-icon {{item.expanded ? 'rotate' : ''}}" src="/images/icons/arrow-down.png" />
+          </view>
+          
+          <image 
+            class="problem-img" 
+            src="{{item.questionImg}}" 
+            mode="widthFix" 
+            bindtap="previewImage" 
+            data-src="{{item.questionImg}}" 
+          />
+
+          <!-- 展开内容：答案、思路、AI分析 -->
+          <view class="card-details" wx:if="{{item.expanded}}">
+            
+            <!-- 用户笔记/思路 -->
+            <view class="section-block" wx:if="{{item.notes}}">
+              <text class="section-title">💡 我的思路/笔记</text>
+              <text class="section-content">{{item.notes}}</text>
+            </view>
+
+            <!-- 正确答案图片 -->
+            <view class="section-block" wx:if="{{item.answerImg}}">
+              <text class="section-title">✅ 正确解法</text>
+              <image 
+                class="answer-img" 
+                src="{{item.answerImg}}" 
+                mode="widthFix" 
+                bindtap="previewImage" 
+                data-src="{{item.answerImg}}" 
+              />
+            </view>
+
+            <!-- AI 分析结果 -->
+            <view class="section-block ai-block" wx:if="{{item.aiAnalysis}}">
+              <view class="ai-header">
+                <image src="/images/icons/ai-sparkle.png" class="ai-icon" />
+                <text class="section-title ai-title">AI 智能点评</text>
+              </view>
+              <text class="section-content ai-content">{{item.aiAnalysis}}</text>
+            </view>
+            
+            <view class="delete-btn" bindtap="deleteProblem" data-id="{{item.id}}">删除此题</view>
+          </view>
+        </view>
+      </block>
+      <block wx:else>
+        <view class="empty-state">
+          <image src="/images/icons/empty-box.png" />
+          <text>还没有错题哦，点击右下角添加</text>
+        </view>
+      </block>
+    </scroll-view>
+
+    <!-- 悬浮添加按钮 -->
+    <view class="fab-add" bindtap="startAdding">
+      <image src="/images/icons/plus-white.png" />
+    </view>
+  </view>
+
+  <!-- ============================== -->
+  <!-- 3. 编辑/添加视图 -->
+  <!-- ============================== -->
+  <view class="editor-view" wx:if="{{isEditing}}">
+    <view class="editor-header">
+      <text class="cancel-text" bindtap="cancelEdit">取消</text>
+      <text class="editor-title">添加错题</text>
+      <button class="save-btn" size="mini" bindtap="saveProblem">保存</button>
+    </view>
+
+    <scroll-view scroll-y="true" class="editor-content">
+      
+      <!-- 1. 上传题干 (必填) -->
+      <view class="upload-section">
+        <text class="label">题目图片 (必填)</text>
+        <view class="upload-box" bindtap="chooseImage" data-type="question">
+          <image wx:if="{{tempQuestionImg}}" src="{{tempQuestionImg}}" mode="aspectFit" />
+          <view wx:else class="upload-placeholder">
+            <image src="/images/icons/camera.png" />
+            <text>点击拍照/上传</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 2. 上传答案 (选填) -->
+      <view class="upload-section">
+        <text class="label">正确答案/解析 (选填)</text>
+        <view class="upload-box small" bindtap="chooseImage" data-type="answer">
+          <image wx:if="{{tempAnswerImg}}" src="{{tempAnswerImg}}" mode="aspectFit" />
+          <view wx:else class="upload-placeholder">
+            <image src="/images/icons/image-add.png" />
+            <text>上传图片</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 3. 文字笔记 -->
+      <view class="input-section">
+        <text class="label">解题思路/备注</text>
+        <textarea 
+          class="note-input" 
+          placeholder="记下当时的错误思路，或者关键公式..." 
+          bindinput="onNoteInput" 
+          value="{{tempNotes}}"
+          maxlength="500"
+        />
+      </view>
+
+      <!-- 4. AI 分析功能 -->
+      <view class="ai-section">
+        <view class="ai-btn-row">
+          <text class="label">AI 智能分析</text>
+          <button class="ai-trigger-btn" bindtap="callAIAnalysis" disabled="{{!tempQuestionImg || isAnalyzing}}">
+            {{isAnalyzing ? '分析中...' : '✨ 一键分析'}}
+          </button>
+        </view>
+        
+        <view class="ai-result-box" wx:if="{{tempAiResult}}">
+          <text>{{tempAiResult}}</text>
+        </view>
+      </view>
+
+    </scroll-view>
+  </view>
+
+</view>

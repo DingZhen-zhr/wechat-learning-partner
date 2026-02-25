@@ -213,6 +213,11 @@ Page({
       return;
     }
     wx.showLoading({ title: "插入中..." });
+    if (!app.globalData || !app.globalData.cloudAvailable) {
+      wx.showToast({ title: '云能力不可用，请检查网络或配置', icon: 'none' });
+      wx.hideLoading();
+      return;
+    }
     try {
       await wx.cloud.callFunction({
         name: "quickstartFunctions",
@@ -237,6 +242,10 @@ Page({
   },
 
   getOpenId() {
+    if (!app.globalData || !app.globalData.cloudAvailable) {
+      wx.showToast({ title: '云能力不可用，请检查网络或配置', icon: 'none' });
+      return;
+    }
     wx.showLoading({
       title: "",
     });
@@ -293,6 +302,10 @@ Page({
   },
 
   getCodeSrc() {
+    if (!app.globalData || !app.globalData.cloudAvailable) {
+      wx.showToast({ title: '云能力不可用，请检查网络或配置', icon: 'none' });
+      return;
+    }
     wx.showLoading({
       title: "",
     });

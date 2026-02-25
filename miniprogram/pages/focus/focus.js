@@ -1,40 +1,15 @@
+// pages/focus/focus.js
 const app = getApp();
 
 Page({
   data: {
-    // --- 原有模板数据 ---
-    type: "",
-    envId: "",
-    showTip: false,
-    title: "",
-    content: "",
-    haveGetOpenId: false,
-    openId: "",
-    haveGetCodeSrc: false,
-    codeSrc: "",
-    haveGetRecord: false,
-    record: [],
-    haveGetImgSrc: false,
-    imgSrc: "",
-    showInsertModal: false,
-    insertRegion: "",
-    insertCity: "",
-    insertSales: "",
-    haveGetCallContainerRes: false,
-    callContainerResStr: "",
-    callcbrCode: "",
-    initEnvCode: "",
-    callOpenIdCode: "",
-    callMiniProgramCode: "",
-    callFunctionCode: "",
-    callCreateCollectionCode: "",
-    callUploadFileCode: "",
-
-    // --- 新增的“专注学习”功能数据 ---
-    subject: '未知科目',
+    // --- 核心业务数据 ---
     planId: null,
-    initialTime: 25 * 60,
-    partnerAvatar: '/images/icons/doubao.png',
+    subject: '未知科目', 
+    initialTime: 25 * 60, 
+    
+    // --- 界面与交互数据 ---
+    partnerAvatar: '/images/icons/doubao.png', // 确保此路径下有图片
     showBubble: false,
     bubbleText: '',
     bubbleTimer: null,
@@ -52,151 +27,95 @@ Page({
   },
 
   /**
-   * 页面加载，整合了原有逻辑和新功能
+   * 页面加载
    */
   onLoad(options) {
-    // --- 新增：处理从计划页传递过来的专注学习参数 ---
+    console.log('[focus] 页面加载，参数:', options);
+
+    // 1. 解析 URL 参数
     if (options.subject) {
-      this.setData({ subject: decodeURIComponent(options.subject) });
-    }
-    if (options.duration) {
-      this.setData({ initialTime: parseInt(options.duration) * 60 });
-    }
-    if (options.id) {
-      // 保存计划 id 以便结束时回传，注意 URL 参数为字符串，需要转为数值
-      this.setData({ planId: parseInt(options.id) });
-    }
-
-    // 如果从 tab 页面切换过来（switchTab），会通过 app.globalData.pendingFocusParams 传参
-    if (app && app.globalData && app.globalData.pendingFocusParams) {
-      const p = app.globalData.pendingFocusParams;
-      console.log('[focus] got pendingFocusParams from globalData:', p);
-      if (p.subject) this.setData({ subject: p.subject });
-      if (p.duration) this.setData({ initialTime: parseInt(p.duration) * 60 });
-      if (p.id) this.setData({ planId: p.id });
-      app.globalData.pendingFocusParams = null;
+      // 处理可能存在的编码问题
+      const decodedSubject = decodeURIComponent(options.subject);
+      
+      this.setData({
+        planId: parseInt(options.id || 0),
+        subject: decodedSubject,
+        // 如果没有传 duration，默认 25 分钟
+        initialTime: parseInt(options.duration || 25) * 60
+      });
     }
 
-    // 启动专注模式下的搭子互动气泡
-    this.startBubbleTimer();
-
-    // 初始化去重标志
-    this._sentStudyRecord = false;
-
-    // 如果通过 URL 或 globalData 设置了初始参数，尝试自动开始计时
+    // 2. 尝试自动开始计时 (延迟执行以等待组件挂载)
     this._maybeAutoStartTimer();
 
-    // --- 保留：原有模板的 onLoad 逻辑 ---
-    if (options?.type) {
-      this.setData({ type: options.type, envId: options.envId });
-      if (options.type === "cloudbaserunfunction" || options.type === "cloudbaserun") {
-        this.getCallcbrCode();
-      }
-      if (options.type === "getOpenId") {
-        this.getOpenIdCode();
-      }
-      if (options.type === "getMiniProgramCode") {
-        this.getMiniProgramCode();
-      }
-      if (options.type === "createCollection") {
-        this.getCreateCollectionCode();
-      }
-      if (options.type === "uploadFile") {
-        this.getUploadFileCode();
-      }
-    }
+    // 3. 启动搭子气泡互动
+    this.startBubbleTimer();
+
+    // 4. 重置发送标志位
+    this._sentStudyRecord = false;
   },
 
-  onShow() {
-    // 每次切回专注页，检查是否有通过 globalData 传来的待启动参数
-    if (app && app.globalData && app.globalData.pendingFocusParams) {
-      const p = app.globalData.pendingFocusParams;
-      console.log('[focus] onShow got pendingFocusParams:', p);
-      if (p.subject) this.setData({ subject: p.subject });
-      if (p.duration) this.setData({ initialTime: parseInt(p.duration) * 60 });
-      if (p.id) this.setData({ planId: p.id });
-      app.globalData.pendingFocusParams = null;
-      // 设置完数据后尝试自动开始计时
-      this._maybeAutoStartTimer();
-    }
-  },
-
+  /**
+   * 页面卸载
+   */
   onUnload() {
+    // 清理定时器，防止内存泄漏
     if (this.data.bubbleTimer) {
       clearInterval(this.data.bubbleTimer);
     }
   },
 
-
+  // ==========================================
+  // === 计时器与互动逻辑 ===
+  // ==========================================
 
   startBubbleTimer() {
-    const bubbleInterval = 20000; // 20秒
+    const bubbleInterval = 20000; // 每20秒尝试显示一次
     const timer = setInterval(() => {
       const randomIndex = Math.floor(Math.random() * this.data.bubbleMessages.length);
-      const randomMessage = this.data.bubbleMessages[randomIndex];
       this.setData({
-        bubbleText: randomMessage,
+        bubbleText: this.data.bubbleMessages[randomIndex],
         showBubble: true
       });
+      // 5秒后自动消失
       setTimeout(() => {
         this.setData({ showBubble: false });
-      }, 5000); // 5秒后消失
+      }, 5000);
     }, bubbleInterval);
     this.setData({ bubbleTimer: timer });
   },
 
-  // 如果页面接收到了待启动参数，则尝试启动计时器
   _maybeAutoStartTimer() {
-    const secs = Number(this.data.initialTime) || 0;
-    if (!secs || secs <= 0) return;
-    const timerComp = this.selectComponent('.study-timer');
-    if (!timerComp) {
-      console.warn('[focus] study-timer 组件未找到，无法自动开始');
-      return;
-    }
-    // 如果计时器已在运行，则无需再次启动
-    if (timerComp.data && timerComp.data.running) {
-      console.log('[focus] study-timer 已在运行，跳过自动开始');
-      return;
-    }
-    console.log('[focus] 自动开始计时器，秒数：', secs);
-    // 确保属性已经绑定并生效后再启动
     setTimeout(() => {
-      try {
-        timerComp.startTimer();
-      } catch (err) {
-        console.error('[focus] 启动计时器失败：', err);
+      const timerComp = this.selectComponent('.study-timer');
+      if (timerComp && !timerComp.data.running) {
+        timerComp.startTimer(); 
       }
-    }, 50);
+    }, 200);
   },
 
   onTimeUpdate(e) {
     this.setData({ totalSecondsStudied: e.detail.totalSeconds });
   },
 
-  onSubjectChange(e) {
-    if (e && e.detail && e.detail.subject) {
-      this.setData({ subject: e.detail.subject });
-    }
-  },
-
+  // 计时自然结束
   onFinish() {
-    console.log('计时完成！');
     this.showSummary();
   },
 
+  // 用户手动提前结束
   handleManualFinish() {
-    const timerComponent = this.selectComponent('.study-timer'); // 通过 class 获取组件实例
+    const timerComponent = this.selectComponent('.study-timer');
     if (timerComponent) {
       timerComponent.stopTimer();
     }
     this.showSummary();
   },
 
+  // 显示总结弹窗
   showSummary() {
-    if (this.data.bubbleTimer) {
-      clearInterval(this.data.bubbleTimer);
-    }
+    if (this.data.bubbleTimer) clearInterval(this.data.bubbleTimer);
+    
     const duration = this.formatDuration(this.data.totalSecondsStudied);
     this.setData({
       finalStudyDuration: duration,
@@ -204,15 +123,88 @@ Page({
     });
   },
 
+  // ==========================================
+  // === 数据保存与回传逻辑 (核心) ===
+  // ==========================================
+
+  /**
+   * 更新计划进度并保存数据
+   */
+  updatePlanProgress() {
+    if (this._sentStudyRecord) return; // 防止重复执行
+
+    const record = {
+      id: this.data.planId,
+      subject: this.data.subject,
+      duration: this.data.totalSecondsStudied,
+      time: Date.now() // 记录当前时间戳
+    };
+
+    // 1. 尝试通过 EventChannel 回传给 Homepage (用于即时更新列表状态)
+    const eventChannel = this.getOpenerEventChannel();
+    if (eventChannel && eventChannel.emit) {
+      eventChannel.emit('acceptStudyRecord', record);
+      console.log('[focus] EventChannel 数据发送成功');
+    }
+
+    // 2. 更新本地缓存 (用于数据持久化和图表统计)
+    this._updateLocalCache(record);
+
+    this._sentStudyRecord = true;
+  },
+
+  /**
+   * 更新本地所有相关的缓存数据
+   */
+  _updateLocalCache(record) {
+    try {
+      // --- A. 更新今日简报数据 (Homepage 用) ---
+      const todayRecords = wx.getStorageSync('todayRecords') || [];
+      // 简单防重
+      if (!todayRecords.some(r => r.id === record.id && r.time === record.time)) {
+        todayRecords.push(record);
+        wx.setStorageSync('todayRecords', todayRecords);
+      }
+
+      // --- B. 更新历史总记录 (Progress 图表页用) --- 【关键补充】
+      const studyHistory = wx.getStorageSync('studyHistory') || [];
+      const historyExists = studyHistory.some(r => r.id === record.id && r.time === record.time);
+      if (!historyExists) {
+        studyHistory.push(record);
+        wx.setStorageSync('studyHistory', studyHistory);
+        console.log('[focus] 已写入历史记录 studyHistory');
+      }
+
+      // --- C. 更新计划列表状态 (标记为已完成) ---
+      const planList = wx.getStorageSync('planList') || [];
+      const idx = planList.findIndex(p => p.id === record.id);
+      if (idx !== -1) {
+        planList[idx].status = 'done';
+        wx.setStorageSync('planList', planList);
+      }
+      
+    } catch (e) {
+      console.error('[focus] 更新缓存失败', e);
+    }
+  },
+
+  // ==========================================
+  // === 界面辅助函数 ===
+  // ==========================================
+
   closeSummaryModal() {
     this.setData({ showSummaryModal: false });
+    
+    // 触发保存逻辑
     this.updatePlanProgress();
-    // 如果页面堆栈中有历史页面，优先返回；否则说明本页是 tabBar 页面，使用 switchTab 跳回首页
-    const pages = getCurrentPages() || [];
+    
+    // 返回上一页
+    const pages = getCurrentPages();
     if (pages.length > 1) {
-      wx.navigateBack();
+      wx.navigateBack({ delta: 1 });
     } else {
-      wx.switchTab({ url: '/pages/homepage/homepage' });
+      // 兜底：如果是单页打开，重定向回首页
+      wx.reLaunch({ url: '/pages/homepage/homepage' });
     }
   },
 
@@ -223,581 +215,17 @@ Page({
     return `${h}:${m}:${s}`;
   },
 
-  updatePlanProgress() {
-    // 防止重复上报
-    if (this._sentStudyRecord) {
-      console.log('[focus] updatePlanProgress: 已上报过该学习记录，跳过');
-      return;
-    }
-
-    const record = {
-      id: this.data.planId,
-      subject: this.data.subject,
-      duration: this.data.totalSecondsStudied,
-      time: Date.now()
-    };
-
-    // 1) 写入本地缓存 todayRecords（持久化，便于首页随时读取）
-    try {
-      const todayRecords = wx.getStorageSync('todayRecords') || [];
-      // 去重：如果已存在相同 id + duration 的记录，则视为重复
-      const exists = todayRecords.some(r => r.id === record.id && r.duration === record.duration);
-      if (!exists) {
-        todayRecords.push(record);
-        wx.setStorageSync('todayRecords', todayRecords);
-        console.log('[focus] 已将学习记录写入本地缓存 todayRecords', record);
-      } else {
-        console.log('[focus] 本地缓存已存在类似记录，跳过写入');
-      }
-    } catch (err) {
-      console.error('[focus] 写入 todayRecords 失败：', err);
-    }
-
-    // 2) 更新本地的 planList 状态为 done（确保计划状态持久化）
-    try {
-      const planList = wx.getStorageSync('planList') || [];
-      const idx = planList.findIndex(p => p.id === record.id);
-      if (idx !== -1) {
-        planList[idx].status = 'done';
-        wx.setStorageSync('planList', planList);
-        console.log('[focus] 已更新本地 planList，标记为完成，id=', record.id);
-      }
-    } catch (err) {
-      console.error('[focus] 更新 planList 失败：', err);
-    }
-
-    // 3) 通过 EventChannel 或全局变量回传给首页
-    const eventChannel = this.getOpenerEventChannel();
-    if (eventChannel && eventChannel.emit) {
-      eventChannel.emit('acceptStudyRecord', record);
-      console.log('[focus] 学习记录已通过 EventChannel 发送', record);
-    } else {
-      console.warn('[focus] 无法获取 EventChannel，学习记录将保存至全局变量');
-      if (!app.globalData.studyRecords) {
-        app.globalData.studyRecords = [];
-      }
-      app.globalData.studyRecords.push(record);
-      app.globalData.lastStudyRecord = record;
-      console.log('[focus] 已保存为 globalData.lastStudyRecord', record);
-    }
-
-    // 标记为已上报，防止重复上报
-    this._sentStudyRecord = true;
-  },
-
-
-
-
-
-
   handleBubbleFeedback() {
-    // 触发爱心跳动动画
     this.setData({ heartBeat: true });
-
-    // 动画结束后重置状态，以便下次可以再次触发
-    setTimeout(() => {
-      this.setData({ heartBeat: false });
-    }, 500); // 动画时长为 500ms
-
-    // (可选) 在这里可以加入一些逻辑，比如向服务器发送一个“感谢鼓励”的事件
-    console.log('用户感谢了搭子的鼓励！');
+    // 增加轻微震动反馈，提升交互感
+    wx.vibrateShort({ type: 'light' });
+    
+    setTimeout(() => { 
+      this.setData({ heartBeat: false }); 
+    }, 500);
   },
 
-  // 同样，在 js 文件中增加这个空函数，以支持 wxml 中的 catchtouchmove
-  preventTouchMove: function () {
-    // do nothing
-  },
-
-
-
-  copyUrl() {
-    wx.setClipboardData({
-      data: "https://gitee.com/TencentCloudBase/cloudbase-agent-ui/tree/main/apps/miniprogram-agent-ui/miniprogram/components/agent-ui",
-      success: function (res) {
-        wx.showToast({
-          title: "复制成功",
-          icon: "success",
-        });
-      },
-    });
-  },
-
-  copyPluginName() {
-    wx.setClipboardData({
-      data: "微信云开发 AI ToolKit",
-      success: function (res) {
-        wx.showToast({
-          title: "复制成功",
-          icon: "success",
-        });
-      },
-    });
-  },
-
-  copyPrompt(e) {
-    const prompt = e.currentTarget.dataset.prompt;
-    wx.setClipboardData({
-      data: prompt,
-      success: function (res) {
-        wx.showToast({
-          title: "复制成功",
-          icon: "success",
-        });
-      },
-    });
-  },
-
-  insertRecord() {
-    this.setData({
-      showInsertModal: true,
-      insertRegion: "",
-      insertCity: "",
-      insertSales: "",
-    });
-  },
-
-  deleteRecord(e) {
-    // 调用云函数删除记录
-    wx.showLoading({
-      title: "删除中...",
-    });
-    wx.cloud
-      .callFunction({
-        name: "quickstartFunctions",
-        data: {
-          type: "deleteRecord",
-          data: {
-            _id: e.currentTarget.dataset.id,
-          },
-        },
-      })
-      .then((resp) => {
-        wx.showToast({
-          title: "删除成功",
-        });
-        this.getRecord(); // 刷新列表
-        wx.hideLoading();
-      })
-      .catch((e) => {
-        wx.showToast({
-          title: "删除失败",
-          icon: "none",
-        });
-        wx.hideLoading();
-      });
-  },
-
-  // 输入框事件
-  onInsertRegionInput(e) {
-    this.setData({ insertRegion: e.detail.value });
-  },
-  onInsertCityInput(e) {
-    this.setData({ insertCity: e.detail.value });
-  },
-  onInsertSalesInput(e) {
-    this.setData({ insertSales: e.detail.value });
-  },
-  // 取消弹窗
-  onInsertCancel() {
-    this.setData({ showInsertModal: false });
-  },
-
-  // 确认插入
-  async onInsertConfirm() {
-    const { insertRegion, insertCity, insertSales } = this.data;
-    if (!insertRegion || !insertCity || !insertSales) {
-      wx.showToast({ title: "请填写完整信息", icon: "none" });
-      return;
-    }
-    wx.showLoading({ title: "插入中..." });
-    try {
-      await wx.cloud.callFunction({
-        name: "quickstartFunctions",
-        data: {
-          type: "insertRecord",
-          data: {
-            region: insertRegion,
-            city: insertCity,
-            sales: Number(insertSales),
-          },
-        },
-      });
-      wx.showToast({ title: "插入成功" });
-      this.setData({ showInsertModal: false });
-      this.getRecord(); // 刷新列表
-    } catch (e) {
-      wx.showToast({ title: "插入失败", icon: "none" });
-      console.error(e);
-    } finally {
-      wx.hideLoading();
-    }
-  },
-
-  getOpenId() {
-    wx.showLoading({
-      title: "",
-    });
-    wx.cloud
-      .callFunction({
-        name: "quickstartFunctions",
-        data: {
-          type: "getOpenId",
-        },
-      })
-      .then((resp) => {
-        this.setData({
-          haveGetOpenId: true,
-          openId: resp.result.openid,
-        });
-        wx.hideLoading();
-      })
-      .catch((e) => {
-        wx.hideLoading();
-        const { errCode, errMsg } = e;
-        if (errMsg.includes("Environment not found")) {
-          this.setData({
-            showTip: true,
-            title: "云开发环境未找到",
-            content:
-              "如果已经开通云开发，请检查环境ID与 `miniprogram/app.js` 中的 `env` 参数是否一致。",
-          });
-          return;
-        }
-        if (errMsg.includes("FunctionName parameter could not be found")) {
-          this.setData({
-            showTip: true,
-            title: "请上传云函数",
-            content:
-              "在'cloudfunctions/quickstartFunctions'目录右键，选择【上传并部署-云端安装依赖】，等待云函数上传完成后重试。",
-          });
-          return;
-        }
-      });
-  },
-
-  clearOpenId() {
-    this.setData({
-      haveGetOpenId: false,
-      openId: "",
-    });
-  },
-
-  clearCallContainerRes() {
-    this.setData({
-      haveGetCallContainerRes: false,
-      callContainerResStr: "",
-    });
-  },
-
-  getCodeSrc() {
-    wx.showLoading({
-      title: "",
-    });
-    wx.cloud
-      .callFunction({
-        name: "quickstartFunctions",
-        data: {
-          type: "getMiniProgramCode",
-        },
-      })
-      .then((resp) => {
-        this.setData({
-          haveGetCodeSrc: true,
-          codeSrc: resp.result,
-        });
-        wx.hideLoading();
-      })
-      .catch((e) => {
-        wx.hideLoading();
-        console.error(e);
-        const { errCode, errMsg } = e;
-        if (errMsg.includes("Environment not found")) {
-          this.setData({
-            showTip: true,
-            title: "云开发环境未找到",
-            content:
-              "如果已经开通云开发，请检查环境ID与 `miniprogram/app.js` 中的 `env` 参数是否一致。",
-          });
-          return;
-        }
-        if (errMsg.includes("FunctionName parameter could not be found")) {
-          this.setData({
-            showTip: true,
-            title: "请上传云函数",
-            content:
-              "在'cloudfunctions/quickstartFunctions'目录右键，选择【上传并部署-云端安装依赖】，等待云函数上传完成后重试。",
-          });
-          return;
-        }
-      });
-  },
-
-  clearCodeSrc() {
-    this.setData({
-      haveGetCodeSrc: false,
-      codeSrc: "",
-    });
-  },
-
-  bindInput(e) {
-    const index = e.currentTarget.dataset.index;
-    const record = this.data.record;
-    record[index].sales = Number(e.detail.value);
-    this.setData({
-      record,
-    });
-  },
-
-  getRecord() {
-    wx.showLoading({
-      title: "",
-    });
-    wx.cloud
-      .callFunction({
-        name: "quickstartFunctions",
-        data: {
-          type: "selectRecord",
-        },
-      })
-      .then((resp) => {
-        this.setData({
-          haveGetRecord: true,
-          record: resp.result.data,
-        });
-        wx.hideLoading();
-      })
-      .catch((e) => {
-        this.setData({
-          showTip: true,
-        });
-        wx.hideLoading();
-        console.error(e);
-      });
-  },
-
-  clearRecord() {
-    this.setData({
-      haveGetRecord: false,
-      record: [],
-    });
-  },
-  updateRecord() {
-    wx.showLoading({
-      title: "",
-    });
-    wx.cloud
-      .callFunction({
-        name: "quickstartFunctions",
-        data: {
-          type: "updateRecord",
-          data: this.data.record,
-        },
-      })
-      .then((resp) => {
-        wx.showToast({
-          title: "更新成功",
-        });
-        wx.hideLoading();
-      })
-      .catch((e) => {
-        console.log(e);
-        this.setData({
-          showUploadTip: true,
-        });
-        wx.hideLoading();
-      });
-  },
-
-  uploadImg() {
-    wx.showLoading({
-      title: "",
-    });
-    // 让用户选择一张图片
-    wx.chooseMedia({
-      count: 1,
-      success: (chooseResult) => {
-        // 将图片上传至云存储空间
-        wx.cloud
-          .uploadFile({
-            // 指定上传到的云路径
-            cloudPath: `my-photo-${new Date().getTime()}.png`,
-            // 指定要上传的文件的小程序临时文件路径
-            filePath: chooseResult.tempFiles[0].tempFilePath,
-          })
-          .then((res) => {
-            this.setData({
-              haveGetImgSrc: true,
-              imgSrc: res.fileID,
-            });
-          })
-          .catch((e) => {
-            console.log("e", e);
-          });
-      },
-      complete: () => {
-        wx.hideLoading();
-      },
-    });
-  },
-
-  clearImgSrc() {
-    this.setData({
-      haveGetImgSrc: false,
-      imgSrc: "",
-    });
-  },
-
-  goOfficialWebsite() {
-    const url = "https://docs.cloudbase.net/toolbox/quick-start";
-    wx.navigateTo({
-      url: `../web/index?url=${url}`,
-    });
-  },
-  runCallContainer: async function () {
-    const app = getApp();
-    console.log("globalData", app.globalData);
-    const c1 = new wx.cloud.Cloud({
-      resourceEnv: app.globalData.env,
-    });
-    await c1.init();
-    const r = await c1.callContainer({
-      path: "/api/users", // 填入业务自定义路径
-      header: {
-        "X-WX-SERVICE": "express-test", // 填入服务名称
-      },
-      // 其余参数同 wx.request
-      method: "GET",
-    });
-    console.log(r);
-    this.setData({
-      haveGetCallContainerRes: true,
-      callContainerResStr: `${JSON.stringify(r.data.items, null, 2)}`,
-    });
-  },
-  getCallcbrCode: function () {
-    const app = getApp();
-    this.setData({
-      callcbrCode: `const c1 = new wx.cloud.Cloud({
-  resourceEnv: ${app.globalData.env}
-})
-await c1.init()
-const r = await c1.callContainer({
-  path: '/api/users', // 此处填入业务自定义路径， /api/users 为示例路径
-  header: {
-    'X-WX-SERVICE': 'express-test', // 填入业务服务名称，express-test 为示例服务
-  },
-  // 其余参数同 wx.request
-  method: 'GET',
-})`,
-    });
-  },
-  getInitEnvCode: function () {
-    const app = getApp();
-    this.setData({
-      initEnvCode: `wx.cloud.init({
-  env: ${app.globalData.env},
-  traceUser: true,
-});`,
-    });
-  },
-  getCreateCollectionCode: function () {
-    this.setData({
-      callCreateCollectionCode: `const cloud = require('wx-server-sdk');
-cloud.init({
-  env: cloud.DYNAMIC_CURRENT_ENV
-});
-const db = cloud.database();
-// 创建集合云函数入口函数
-exports.main = async (event, context) => {
-  try {
-    // 创建集合
-    await db.createCollection('sales');
-    return {
-      success: true
-    };
-  } catch (e) {
-    return {
-      success: true,
-      data: 'create collection success'
-    };
+  preventTouchMove() {
+    // 阻止弹窗下的页面滚动
   }
-};`,
-    });
-  },
-  getOpenIdCode: function () {
-    this.setData({
-      callOpenIdCode: `const cloud = require('wx-server-sdk');
-cloud.init({
-  env: cloud.DYNAMIC_CURRENT_ENV
-});
-// 获取openId云函数入口函数
-exports.main = async (event, context) => {
-  // 获取基础信息
-  const wxContext = cloud.getWXContext();
-  return {
-    openid: wxContext.OPENID,
-    appid: wxContext.APPID,
-    unionid: wxContext.UNIONID,
-  };
-};`,
-      callFunctionCode: `wx.cloud.callFunction({
-  name: 'quickstartFunctions',
-  data: {
-    type: 'getOpenId'
-  }
-}).then((resp) => console.log(resp))`,
-    });
-  },
-  getMiniProgramCode: function () {
-    this.setData({
-      callMiniProgramCode: `const cloud = require('wx-server-sdk');
-cloud.init({
-  env: cloud.DYNAMIC_CURRENT_ENV
-});
-// 获取小程序二维码云函数入口函数
-exports.main = async (event, context) => {
-  // 获取小程序二维码的buffer
-  const resp = await cloud.openapi.wxacode.get({
-    path: 'pages/index/index'
-  });
-  const { buffer } = resp;
-  // 将图片上传云存储空间
-  const upload = await cloud.uploadFile({
-    cloudPath: 'code.png',
-    fileContent: buffer
-  });
-  return upload.fileID;
-};
-`,
-      callFunctionCode: `wx.cloud.callFunction({
-  name: 'quickstartFunctions',
-  data: {
-    type: 'getMiniProgramCode'
-  }
-}).then((resp) => console.log(resp))`,
-    });
-  },
-  getUploadFileCode: function () {
-    this.setData({
-      callUploadFileCode: `wx.chooseMedia({
-count: 1,
-success: (chooseResult) => {
-  // 将图片上传至云存储空间
-  wx.cloud
-    .uploadFile({
-      // 指定上传到的云路径
-      cloudPath: "my-photo.png",
-      // 指定要上传的文件的小程序临时文件路径
-      filePath: chooseResult.tempFiles[0].tempFilePath,
-    })
-    .then((res) => {
-      console.log(res)
-    })
-    .catch((e) => {
-      console.log('e', e)
-    });
-}
-});`,
-    });
-  },
 });

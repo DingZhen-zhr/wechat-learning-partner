@@ -1,0 +1,71 @@
+<!-- pages/progress/progress.wxml -->
+<view class="achievement-container">
+  
+  <!-- 1. 搭子口语化总结 -->
+  <view class="summary-section">
+    <!-- 这里绑定的是 js 中动态生成的 summaryText -->
+    <text class="summary-text">{{summaryText}}</text>
+  </view>
+
+  <!-- 2. 学习图表区域 -->
+  <view class="chart-section">
+    <view class="chart-title">本周学习时长 (小时)</view>
+    
+    <view class="bar-chart">
+      <!-- 遍历 studyHours 数组，生成7根柱子 -->
+      <block wx:for="{{studyHours}}" wx:key="index">
+        <view class="bar-item">
+          <!-- 动态高度：item * 15 是为了拉开高度差，+4 是最小高度 -->
+          <view class="bar" style="height:{{item * 15 + 4}}rpx"></view>
+          
+          <!-- 仅在时长 > 0 时显示数值 -->
+          <text class="bar-value" wx:if="{{item > 0}}">{{item}}</text>
+          
+          <!-- 显示星期几 -->
+          <text class="bar-label">{{weekdays[index]}}</text>
+        </view>
+      </block>
+    </view>
+    
+    <!-- 统计数据行 -->
+    <view class="stat-row">
+      <view class="stat-item">
+        <text class="stat-label">本周打卡</text>
+        <text class="stat-value">{{continueDays}} <text class="unit">天</text></text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-label">计划完成</text>
+        <text class="stat-value">{{planRate}} <text class="unit">%</text></text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-label">主要科目</text>
+        <!-- 科目分布可能比较长，单独给样式控制 -->
+        <text class="stat-value subject-dist">{{subjectDist}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 3. 勋章系统区域 (保持静态展示或后续开发) -->
+  <view class="badge-section">
+    <view class="badge-title">勋章中心</view>
+    <view class="badge-list">
+      <view class="badge-item">
+       <!-- 使用 badges 目录下的图片 -->
+      <image class="badge-img" src="/images/badges/night.png" mode="aspectFit"></image>
+        <text class="badge-desc">专注达人</text>
+      </view>
+      
+      <!-- 添加 grayscale 类模拟未获得状态 -->
+      <view class="badge-item grayscale">
+        <!-- 文件名 partner.jpg 在 badges 文件夹中 -->
+        <image class="badge-img" src="/images/badges/partner.jpg" mode="aspectFit"></image>
+        <text class="badge-desc">连续3天</text>
+      </view>
+      
+      <view class="badge-item grayscale">
+        <image class="badge-img" src="/images/badges/clear.png" mode="aspectFit"></image>
+        <text class="badge-desc">清空计划</text>
+      </view>
+    </view>
+  </view>
+</view>

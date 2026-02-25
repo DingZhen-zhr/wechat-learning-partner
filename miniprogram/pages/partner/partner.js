@@ -1,606 +1,228 @@
-// pages/exampleDetail/index.js
+// pages/partner/partner.js
+const Typewriter = require('../../utils/typewriter');
+
 Page({
+  /**
+   * 页面的初始数据
+   */
   data: {
-    type: "",
-    envId: "",
-    showTip: false,
-    title: "",
-    content: "",
-
-    haveGetOpenId: false,
-    openId: "",
-
-    haveGetCodeSrc: false,
-    codeSrc: "",
-
-    haveGetRecord: false,
-    record: [],
-
-    haveGetImgSrc: false,
-    imgSrc: "",
-
-    // ai
-    modelConfig: {
-      modelProvider: "deepseek", // 大模型服务厂商
-      quickResponseModel: "deepseek-v3", // 快速响应模型 （混元 turbo, gpt4 turbo版，deepseek v3等）
-      logo: "https://cloudcache.tencent-cloud.com/qcloud/ui/static/static_source_business/2339414f-2c0d-4537-9618-1812bd14f4af.svg", // model 头像
-      welcomeMsg: "我是deepseek-v3，很高兴见到你！", // model 欢迎语
-    },
-    callcbrCode: "",
-    initEnvCode: "",
-    callOpenIdCode: "",
-    callMiniProgramCode: "",
-    callFunctionCode: "",
-    callCreateCollectionCode: "",
-    callUploadFileCode: "",
-
-    showInsertModal: false,
-    insertRegion: "",
-    insertCity: "",
-    insertSales: "",
-
-    haveGetCallContainerRes: false,
-    callContainerResStr: "",
-
-    ai_page_config: `{
-  "usingComponents": {
-    "agent-ui":"/components/agent-ui/index"
-  },
-}`,
-    ai_wxml_config: `&lt;agent-ui agentConfig="{{agentConfig}}" showBotAvatar="{{showBotAvatar}}" chatMode="{{chatMode}}" modelConfig="{{modelConfig}}""&gt;&lt;/agent-ui&gt;`,
-    ai_data_config: `data: {
-  chatMode: "bot", // bot 表示使用agent，model 表示使用大模型
-  showBotAvatar: true, // 是否在对话框左侧显示头像
-  agentConfig: {
-    botId: "your agent id", // agent id,
-    allowWebSearch: true, // 允许客户端选择展示联网搜索按钮
-    allowUploadFile: true, // 允许客户端展示上传文件按钮
-    allowPullRefresh: true, // 允许客户端展示下拉刷新
-    allowUploadImage: true, // 允许客户端展示上传图片按钮
-    allowMultiConversation: true, // 允许客户端展示查看会话列表/新建会话按钮
-    showToolCallDetail: true, // 是否展示 mcp server toolCall 细节
-    allowVoice: true, // 允许客户端展示语音按钮
-    showBotName: true, // 允许展示bot名称
-  },
-  modelConfig: {
-    modelProvider: "hunyuan-open", // 大模型服务厂商
-    quickResponseModel: "hunyuan-lite", // 大模型名称
-    logo: "", // model 头像
-    welcomeMsg: "欢迎语", // model 欢迎语
-  },
-}`,
-
-    // AI 场景示例数据
-    aiScenarios: [
+    // 确保这个图片路径与你项目中的实际路径一致
+    partnerAvatar: '/images/icons/doubao.png', 
+    inputValue: '',
+    scrollToView: '', // 用于控制 scroll-view 滚动到的位置 ID
+    isAiTyping: false, // 控制是否显示 AI 正在输入的动画气泡
+    msgList: [
+      // 初始欢迎语，role 必须是 'ai' 以匹配 WXML 中的 wx:else 分支
       {
-        title: "💡 智能代码生成与补全",
-        examples: [
-          "帮我创建一个商品列表页面,包含图片、标题、价格和加入购物车按钮",
-          "帮我完善这个函数,实现商品搜索功能",
-        ],
-      },
-      {
-        title: "🔧 代码优化与重构建议",
-        examples: [
-          "优化这段代码的性能,减少不必要的渲染",
-          "完善云函数调用的错误处理代码",
-        ],
-      },
-    ],
+        id: 'init-0',
+        role: 'ai', 
+        content: '嗨！我是你的学习搭子。今天想聊点什么？无论是学习困惑还是闲聊，我都在哦！👋'
+      }
+    ]
   },
 
+  /**
+   * 生命周期函数--监听页面加载
+   */
   onLoad(options) {
-    if (
-      options.type === "cloudbaserunfunction" ||
-      options.type === "cloudbaserun"
-    ) {
-      this.getCallcbrCode();
-    }
-    if (options.type === "getOpenId") {
-      this.getOpenIdCode();
-    }
-    if (options.type === "getMiniProgramCode") {
-      this.getMiniProgramCode();
-    }
-
-    if (options.type === "createCollection") {
-      this.getCreateCollectionCode();
-    }
-
-    if (options.type === "uploadFile") {
-      this.getUploadFileCode();
-    }
-    this.setData({ type: options?.type, envId: options?.envId });
+    this.loadHistory();
   },
 
-  copyUrl() {
-    wx.setClipboardData({
-      data: "https://gitee.com/TencentCloudBase/cloudbase-agent-ui/tree/main/apps/miniprogram-agent-ui/miniprogram/components/agent-ui",
-      success: function (res) {
-        wx.showToast({
-          title: "复制成功",
-          icon: "success",
-        });
+  /**
+   * 加载本地历史聊天记录
+   */
+  loadHistory() {
+    const history = wx.getStorageSync('partnerChatHistory');
+    if (history && history.length > 0) {
+      this.setData({ msgList: history });
+      // 延迟滚动，确保页面渲染完成后再滚到底部
+      setTimeout(() => {
+        this.scrollToBottom();
+      }, 200);
+    }
+  },
+
+  /**
+   * 保存最近 50 条历史记录到本地缓存
+   */
+  saveHistory() {
+    const history = this.data.msgList.slice(-50);
+    wx.setStorageSync('partnerChatHistory', history);
+  },
+
+  /**
+   * 监听输入框内容变化
+   */
+  onInput(e) {
+    this.setData({ inputValue: e.detail.value });
+  },
+
+  /**
+   * 点击快捷指令 Chip
+   */
+  sendQuickMsg(e) {
+    const text = e.currentTarget.dataset.text;
+    this.sendUserMessage(text);
+  },
+
+  /**
+   * 点击发送按钮或键盘回车
+   */
+  handleSend() {
+    const text = this.data.inputValue.trim();
+    if (!text) return;
+    this.sendUserMessage(text);
+  },
+
+  /**
+   * [核心逻辑] 发送用户消息
+   * 1. 更新 UI 显示用户消息
+   * 2. 触发 AI 思考状态
+   * 3. 调用 API
+   */
+  sendUserMessage(text) {
+    // 1. 构建用户消息对象，role 为 'user'
+    const newMsg = {
+      id: `msg-${Date.now()}`,
+      role: 'user', 
+      content: text
+    };
+    
+    const list = this.data.msgList;
+    list.push(newMsg);
+
+    // 2. 更新数据，清空输入框，开启 AI 正在输入状态
+    this.setData({
+      msgList: list,
+      inputValue: '', 
+      isAiTyping: true 
+    });
+
+    // 3. 滚动到底部并保存
+    this.scrollToBottom();
+    this.saveHistory();
+
+    // 4. 发起 AI 请求
+    this.callAiApi(text);
+  },
+
+  // 调用 AI API (接入 DeepSeek)
+  callAiApi(query) {
+    this.setData({ isAiThinking: true });
+
+    // 1. 获取今日计划数据 (从本地缓存)
+    const planList = wx.getStorageSync('planList') || [];
+    const todayPlanStr = planList.length > 0 
+      ? planList.map(p => `- ${p.title} (状态: ${p.completed ? '已完成' : '未完成'})`).join('\n')
+      : "暂无今日计划";
+
+    // 2. 构建 System Prompt
+    const systemPrompt = `你是一个贴心的学习搭子。你的任务是陪伴用户学习，鼓励他们，并根据他们的学习计划提供建议。
+    
+    【用户的今日计划】：
+    ${todayPlanStr}
+    
+    请根据用户的输入和计划情况进行回复。语气要活泼、可爱、充满正能量。如果用户问计划，请根据上述数据回答。`;
+
+    // 3. 调用云函数
+    wx.cloud.callFunction({
+      name: 'studyPlanAI',
+      data: {
+        type: 'chat',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: query }
+        ]
       },
-    });
-  },
-
-  copyPluginName() {
-    wx.setClipboardData({
-      data: "微信云开发 AI ToolKit",
-      success: function (res) {
-        wx.showToast({
-          title: "复制成功",
-          icon: "success",
-        });
+      success: (res) => {
+        const result = res.result;
+        if (result && result.success && result.data && result.data.choices) {
+          const replyText = result.data.choices[0].message.content;
+          this.handleAiResponse(replyText);
+        } else {
+          console.error('AI API Error:', result);
+          this.handleAiResponse("哎呀，我脑子卡了一下（云函数调用失败），请稍后再试～");
+        }
       },
-    });
-  },
-
-  copyPrompt(e) {
-    const prompt = e.currentTarget.dataset.prompt;
-    wx.setClipboardData({
-      data: prompt,
-      success: function (res) {
-        wx.showToast({
-          title: "复制成功",
-          icon: "success",
-        });
-      },
-    });
-  },
-
-  insertRecord() {
-    this.setData({
-      showInsertModal: true,
-      insertRegion: "",
-      insertCity: "",
-      insertSales: "",
-    });
-  },
-
-  deleteRecord(e) {
-    // 调用云函数删除记录
-    wx.showLoading({
-      title: "删除中...",
-    });
-    wx.cloud
-      .callFunction({
-        name: "quickstartFunctions",
-        data: {
-          type: "deleteRecord",
-          data: {
-            _id: e.currentTarget.dataset.id,
-          },
-        },
-      })
-      .then((resp) => {
-        wx.showToast({
-          title: "删除成功",
-        });
-        this.getRecord(); // 刷新列表
-        wx.hideLoading();
-      })
-      .catch((e) => {
-        wx.showToast({
-          title: "删除失败",
-          icon: "none",
-        });
-        wx.hideLoading();
-      });
-  },
-
-  // 输入框事件
-  onInsertRegionInput(e) {
-    this.setData({ insertRegion: e.detail.value });
-  },
-  onInsertCityInput(e) {
-    this.setData({ insertCity: e.detail.value });
-  },
-  onInsertSalesInput(e) {
-    this.setData({ insertSales: e.detail.value });
-  },
-  // 取消弹窗
-  onInsertCancel() {
-    this.setData({ showInsertModal: false });
-  },
-
-  // 确认插入
-  async onInsertConfirm() {
-    const { insertRegion, insertCity, insertSales } = this.data;
-    if (!insertRegion || !insertCity || !insertSales) {
-      wx.showToast({ title: "请填写完整信息", icon: "none" });
-      return;
-    }
-    wx.showLoading({ title: "插入中..." });
-    try {
-      await wx.cloud.callFunction({
-        name: "quickstartFunctions",
-        data: {
-          type: "insertRecord",
-          data: {
-            region: insertRegion,
-            city: insertCity,
-            sales: Number(insertSales),
-          },
-        },
-      });
-      wx.showToast({ title: "插入成功" });
-      this.setData({ showInsertModal: false });
-      this.getRecord(); // 刷新列表
-    } catch (e) {
-      wx.showToast({ title: "插入失败", icon: "none" });
-      console.error(e);
-    } finally {
-      wx.hideLoading();
-    }
-  },
-
-  getOpenId() {
-    wx.showLoading({
-      title: "",
-    });
-    wx.cloud
-      .callFunction({
-        name: "quickstartFunctions",
-        data: {
-          type: "getOpenId",
-        },
-      })
-      .then((resp) => {
-        this.setData({
-          haveGetOpenId: true,
-          openId: resp.result.openid,
-        });
-        wx.hideLoading();
-      })
-      .catch((e) => {
-        wx.hideLoading();
-        const { errCode, errMsg } = e;
-        if (errMsg.includes("Environment not found")) {
-          this.setData({
-            showTip: true,
-            title: "云开发环境未找到",
-            content:
-              "如果已经开通云开发，请检查环境ID与 `miniprogram/app.js` 中的 `env` 参数是否一致。",
-          });
-          return;
-        }
-        if (errMsg.includes("FunctionName parameter could not be found")) {
-          this.setData({
-            showTip: true,
-            title: "请上传云函数",
-            content:
-              "在'cloudfunctions/quickstartFunctions'目录右键，选择【上传并部署-云端安装依赖】，等待云函数上传完成后重试。",
-          });
-          return;
-        }
-      });
-  },
-
-  clearOpenId() {
-    this.setData({
-      haveGetOpenId: false,
-      openId: "",
-    });
-  },
-
-  clearCallContainerRes() {
-    this.setData({
-      haveGetCallContainerRes: false,
-      callContainerResStr: "",
-    });
-  },
-
-  getCodeSrc() {
-    wx.showLoading({
-      title: "",
-    });
-    wx.cloud
-      .callFunction({
-        name: "quickstartFunctions",
-        data: {
-          type: "getMiniProgramCode",
-        },
-      })
-      .then((resp) => {
-        this.setData({
-          haveGetCodeSrc: true,
-          codeSrc: resp.result,
-        });
-        wx.hideLoading();
-      })
-      .catch((e) => {
-        wx.hideLoading();
-        console.error(e);
-        const { errCode, errMsg } = e;
-        if (errMsg.includes("Environment not found")) {
-          this.setData({
-            showTip: true,
-            title: "云开发环境未找到",
-            content:
-              "如果已经开通云开发，请检查环境ID与 `miniprogram/app.js` 中的 `env` 参数是否一致。",
-          });
-          return;
-        }
-        if (errMsg.includes("FunctionName parameter could not be found")) {
-          this.setData({
-            showTip: true,
-            title: "请上传云函数",
-            content:
-              "在'cloudfunctions/quickstartFunctions'目录右键，选择【上传并部署-云端安装依赖】，等待云函数上传完成后重试。",
-          });
-          return;
-        }
-      });
-  },
-
-  clearCodeSrc() {
-    this.setData({
-      haveGetCodeSrc: false,
-      codeSrc: "",
-    });
-  },
-
-  bindInput(e) {
-    const index = e.currentTarget.dataset.index;
-    const record = this.data.record;
-    record[index].sales = Number(e.detail.value);
-    this.setData({
-      record,
-    });
-  },
-
-  getRecord() {
-    wx.showLoading({
-      title: "",
-    });
-    wx.cloud
-      .callFunction({
-        name: "quickstartFunctions",
-        data: {
-          type: "selectRecord",
-        },
-      })
-      .then((resp) => {
-        this.setData({
-          haveGetRecord: true,
-          record: resp.result.data,
-        });
-        wx.hideLoading();
-      })
-      .catch((e) => {
-        this.setData({
-          showTip: true,
-        });
-        wx.hideLoading();
-        console.error(e);
-      });
-  },
-
-  clearRecord() {
-    this.setData({
-      haveGetRecord: false,
-      record: [],
-    });
-  },
-  updateRecord() {
-    wx.showLoading({
-      title: "",
-    });
-    wx.cloud
-      .callFunction({
-        name: "quickstartFunctions",
-        data: {
-          type: "updateRecord",
-          data: this.data.record,
-        },
-      })
-      .then((resp) => {
-        wx.showToast({
-          title: "更新成功",
-        });
-        wx.hideLoading();
-      })
-      .catch((e) => {
-        console.log(e);
-        this.setData({
-          showUploadTip: true,
-        });
-        wx.hideLoading();
-      });
-  },
-
-  uploadImg() {
-    wx.showLoading({
-      title: "",
-    });
-    // 让用户选择一张图片
-    wx.chooseMedia({
-      count: 1,
-      success: (chooseResult) => {
-        // 将图片上传至云存储空间
-        wx.cloud
-          .uploadFile({
-            // 指定上传到的云路径
-            cloudPath: `my-photo-${new Date().getTime()}.png`,
-            // 指定要上传的文件的小程序临时文件路径
-            filePath: chooseResult.tempFiles[0].tempFilePath,
-          })
-          .then((res) => {
-            this.setData({
-              haveGetImgSrc: true,
-              imgSrc: res.fileID,
-            });
-          })
-          .catch((e) => {
-            console.log("e", e);
-          });
+      fail: (err) => {
+        console.error('Cloud Call Failed:', err);
+        this.handleAiResponse("网络好像有点问题，我听不清你说什么...");
       },
       complete: () => {
-        wx.hideLoading();
-      },
+        this.setData({ isAiThinking: false });
+      }
     });
   },
 
-  clearImgSrc() {
+  /**
+   * [核心逻辑] 处理 AI 回复 (流式打字机效果)
+   */
+  handleAiResponse(text) {
+    // 1. 先创建一个空的 AI 消息占位
+    const aiMsgId = `msg-${Date.now()}`;
+    const aiMsg = {
+      id: aiMsgId,
+      role: 'ai',
+      content: '' // 初始为空
+    };
+
+    const list = this.data.msgList;
+    list.push(aiMsg);
+
+    // 2. 更新列表，保持 isAiTyping 为 true (因为还在打字)
     this.setData({
-      haveGetImgSrc: false,
-      imgSrc: "",
+      msgList: list,
+      isAiTyping: true // 这里保持 true，让输入状态的气泡继续显示或者直接用打字内容替代
+    });
+    this.scrollToBottom();
+
+    // 3. 启动打字机
+    const typewriter = new Typewriter({
+      speed: 50,
+      onUpdate: (currentText) => {
+        // 更新最后一条消息的内容
+        const lastIndex = this.data.msgList.length - 1;
+        const key = `msgList[${lastIndex}].content`;
+        
+        this.setData({
+          [key]: currentText
+        });
+        
+        // 每打几个字滚一下，体验更好
+        if (currentText.length % 10 === 0) {
+          this.scrollToBottom();
+        }
+      },
+      onComplete: () => {
+        this.setData({ isAiTyping: false });
+        this.saveHistory();
+        this.scrollToBottom();
+        // 收到完整回复时的轻微震动反馈
+        wx.vibrateShort({ type: 'light' });
+      }
+    });
+
+    typewriter.start(text);
+  },
+
+  /**
+   * 滚动到底部逻辑
+   * 对应 WXML 中的 scroll-into-view="{{scrollToView}}"
+   * WXML 中的 id 是 msg-{{index}}
+   */
+  scrollToBottom() {
+    wx.nextTick(() => {
+      this.setData({
+        // 这里的 index 对应数组最后一个元素的下标
+        scrollToView: `msg-${this.data.msgList.length - 1}`
+      });
     });
   },
 
-  goOfficialWebsite() {
-    const url = "https://docs.cloudbase.net/toolbox/quick-start";
-    wx.navigateTo({
-      url: `../web/index?url=${url}`,
-    });
-  },
-  runCallContainer: async function () {
-    const app = getApp();
-    console.log("globalData", app.globalData);
-    const c1 = new wx.cloud.Cloud({
-      resourceEnv: app.globalData.env,
-    });
-    await c1.init();
-    const r = await c1.callContainer({
-      path: "/api/users", // 填入业务自定义路径
-      header: {
-        "X-WX-SERVICE": "express-test", // 填入服务名称
-      },
-      // 其余参数同 wx.request
-      method: "GET",
-    });
-    console.log(r);
-    this.setData({
-      haveGetCallContainerRes: true,
-      callContainerResStr: `${JSON.stringify(r.data.items, null, 2)}`,
-    });
-  },
-  getCallcbrCode: function () {
-    const app = getApp();
-    this.setData({
-      callcbrCode: `const c1 = new wx.cloud.Cloud({
-  resourceEnv: ${app.globalData.env}
-})
-await c1.init()
-const r = await c1.callContainer({
-  path: '/api/users', // 此处填入业务自定义路径， /api/users 为示例路径
-  header: {
-    'X-WX-SERVICE': 'express-test', // 填入业务服务名称，express-test 为示例服务
-  },
-  // 其余参数同 wx.request
-  method: 'GET',
-})`,
-    });
-  },
-  getInitEnvCode: function () {
-    const app = getApp();
-    this.setData({
-      initEnvCode: `wx.cloud.init({
-  env: ${app.globalData.env},
-  traceUser: true,
-});`,
-    });
-  },
-  getCreateCollectionCode: function () {
-    this.setData({
-      callCreateCollectionCode: `const cloud = require('wx-server-sdk');
-cloud.init({
-  env: cloud.DYNAMIC_CURRENT_ENV
-});
-const db = cloud.database();
-// 创建集合云函数入口函数
-exports.main = async (event, context) => {
-  try {
-    // 创建集合
-    await db.createCollection('sales');
-    return {
-      success: true
-    };
-  } catch (e) {
-    return {
-      success: true,
-      data: 'create collection success'
-    };
+  /**
+   * 点击聊天背景收起键盘
+   */
+  hideKeyboard() {
+    wx.hideKeyboard();
   }
-};`,
-    });
-  },
-  getOpenIdCode: function () {
-    this.setData({
-      callOpenIdCode: `const cloud = require('wx-server-sdk');
-cloud.init({
-  env: cloud.DYNAMIC_CURRENT_ENV
-});
-// 获取openId云函数入口函数
-exports.main = async (event, context) => {
-  // 获取基础信息
-  const wxContext = cloud.getWXContext();
-  return {
-    openid: wxContext.OPENID,
-    appid: wxContext.APPID,
-    unionid: wxContext.UNIONID,
-  };
-};`,
-      callFunctionCode: `wx.cloud.callFunction({
-  name: 'quickstartFunctions',
-  data: {
-    type: 'getOpenId'
-  }
-}).then((resp) => console.log(resp))`,
-    });
-  },
-  getMiniProgramCode: function () {
-    this.setData({
-      callMiniProgramCode: `const cloud = require('wx-server-sdk');
-cloud.init({
-  env: cloud.DYNAMIC_CURRENT_ENV
-});
-// 获取小程序二维码云函数入口函数
-exports.main = async (event, context) => {
-  // 获取小程序二维码的buffer
-  const resp = await cloud.openapi.wxacode.get({
-    path: 'pages/index/index'
-  });
-  const { buffer } = resp;
-  // 将图片上传云存储空间
-  const upload = await cloud.uploadFile({
-    cloudPath: 'code.png',
-    fileContent: buffer
-  });
-  return upload.fileID;
-};
-`,
-      callFunctionCode: `wx.cloud.callFunction({
-  name: 'quickstartFunctions',
-  data: {
-    type: 'getMiniProgramCode'
-  }
-}).then((resp) => console.log(resp))`,
-    });
-  },
-  getUploadFileCode: function () {
-    this.setData({
-      callUploadFileCode: `wx.chooseMedia({
-count: 1,
-success: (chooseResult) => {
-  // 将图片上传至云存储空间
-  wx.cloud
-    .uploadFile({
-      // 指定上传到的云路径
-      cloudPath: "my-photo.png",
-      // 指定要上传的文件的小程序临时文件路径
-      filePath: chooseResult.tempFiles[0].tempFilePath,
-    })
-    .then((res) => {
-      console.log(res)
-    })
-    .catch((e) => {
-      console.log('e', e)
-    });
-}
-});`,
-    });
-  },
 });

@@ -3,20 +3,24 @@
   <scroll-view class="chat-list" scroll-y="true" scroll-into-view="{{toView}}" scroll-with-animation="true">
     <block wx:for="{{msgList}}" wx:key="index">
       
-      <!-- AI的消息 (左侧) -->
+      <!-- AI的消息 (左侧布局：头像 + 气泡) -->
       <view class="chat-item left" wx:if="{{item.type === 'ai'}}">
-        <image class="avatar" src="/images/icons/doubao.png" mode="aspectFill"></image> <!-- 请确保images下有图片，或者删掉image标签 -->
+        <!-- 1. 头像在前 -->
+        <image class="avatar" src="/images/icons/doubao.png" mode="aspectFill"></image>
+        <!-- 2. 气泡在后 -->
         <view class="bubble ai-bubble">
           <text user-select="true">{{item.content}}</text>
         </view>
       </view>
 
-      <!-- 用户的消息 (右侧) -->
+      <!-- 用户的消息 (右侧布局：气泡 + 头像) -->
       <view class="chat-item right" wx:if="{{item.type === 'user'}}">
+        <!-- 1. 气泡在前 -->
         <view class="bubble user-bubble">
           <text user-select="true">{{item.content}}</text>
         </view>
-        <image class="avatar" src="/images/icons/user_avatar.png" mode="aspectFill"></image> <!-- 请确保images下有图片 -->
+        <!-- 2. 头像在后 -->
+        <image class="avatar" src="/images/icons/user_avatar.png" mode="aspectFill"></image>
       </view>
 
     </block>
@@ -30,10 +34,10 @@
     <view id="scroll-bottom"></view>
   </scroll-view>
 
-  <!-- 2. 底部输入区域 -->
+  <!-- 2. 底部输入区域 (保持原样) -->
   <view class="input-area">
     <!-- 切换语音/键盘图标 -->
-    <image class="icon-btn" src="{{isVoiceMode ? '/images/icons/mic.png' : '/images/icons/keyboard.png'}}" bindtap="toggleInputMode"></image>
+    <image class="icon-btn" src="{{isVoiceMode ? '/images/icons/keyboard.png' : '/images/icons/mic.png'}}" bindtap="toggleInputMode"></image>
 
     <!-- 文本输入框 -->
     <input 

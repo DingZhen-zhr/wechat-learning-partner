@@ -1,0 +1,473 @@
+/* pages/error-book/error-book.wxss */
+
+/* === 全局基础设置 === */
+page {
+  background-color: #f7f8fa;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box; 
+}
+
+view, text, scroll-view, image, button, textarea, input {
+  box-sizing: border-box; 
+}
+
+.container {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* === 1. 科目分类视图样式 === */
+.subject-view {
+  width: 100%;
+  padding: 40rpx 30rpx;
+  flex: 1;
+}
+
+.header {
+  margin-bottom: 40rpx;
+  width: 100%;
+}
+
+.header .title {
+  font-size: 48rpx;
+  font-weight: bold;
+  color: #333;
+  display: block;
+}
+
+.header .subtitle {
+  font-size: 28rpx;
+  color: #999;
+  margin-top: 10rpx;
+}
+
+.grid-container {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); 
+  gap: 30rpx;
+}
+
+.folder-card {
+  background-color: #fff;
+  border-radius: 24rpx;
+  padding: 40rpx 20rpx; 
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.05);
+  transition: transform 0.1s;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+}
+
+.folder-card:active {
+  transform: scale(0.98);
+}
+
+.folder-icon {
+  width: 80rpx;
+  height: 80rpx;
+  margin-bottom: 20rpx;
+}
+
+.folder-name {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.folder-count {
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 8rpx;
+}
+
+.add-btn {
+  border: 2rpx dashed #ccc;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.add-icon {
+  width: 60rpx;
+  height: 60rpx;
+  margin-bottom: 20rpx;
+  opacity: 0.5;
+}
+
+/* === 2. 题目列表视图样式 === */
+.list-view {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20rpx 30rpx;
+  background-color: #fff;
+  box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.03);
+  z-index: 10;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  font-size: 28rpx;
+  color: #666;
+  padding: 10rpx 0;
+}
+
+.back-btn image {
+  width: 32rpx;
+  height: 32rpx;
+  margin-right: 10rpx;
+}
+
+.current-subject {
+  font-size: 34rpx;
+  font-weight: bold;
+}
+
+.placeholder {
+  width: 80rpx;
+}
+
+.problem-scroll {
+  flex: 1;
+  width: 100%;
+  padding: 20rpx 30rpx;
+}
+
+.problem-card {
+  width: 100%;
+  background-color: #fff;
+  border-radius: 20rpx;
+  padding: 30rpx 0; /* 这里的左右 padding 设为 0，交给内部元素控制，或者保持 30rpx 也可以 */
+  margin-bottom: 30rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.04);
+  /* 增加 padding-bottom 以防内容贴边 */
+  padding-bottom: 40rpx;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20rpx;
+  width: 100%;
+  padding: 0 30rpx; /* header 需要左右间距 */
+}
+
+.tag {
+  background-color: #ffebee;
+  color: #d32f2f;
+  font-size: 22rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  margin-right: 15rpx;
+  flex-shrink: 0;
+}
+
+.date {
+  flex: 1;
+  font-size: 26rpx;
+  color: #999;
+}
+
+.expand-icon {
+  width: 32rpx;
+  height: 32rpx;
+  transition: transform 0.3s;
+  opacity: 0.4;
+}
+
+.rotate {
+  transform: rotate(180deg);
+}
+
+/* --- [修改点] 错题图片样式 --- */
+.problem-img {
+  width: 90%; /* 宽度 90% */
+  margin: 0 auto; /* 水平居中 */
+  border-radius: 12rpx;
+  background-color: #f0f0f0;
+  display: block;
+  height: auto; /* 配合 mode="widthFix" 保持原比例 */
+}
+
+.card-details {
+  margin-top: 30rpx;
+  padding-top: 30rpx;
+  border-top: 1rpx solid #eee;
+  animation: fadeIn 0.3s ease;
+  width: 100%;
+  padding-left: 30rpx;
+  padding-right: 30rpx; /* 详情区域恢复左右间距 */
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.section-block {
+  margin-bottom: 30rpx;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.section-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 15rpx;
+  display: block;
+}
+
+.section-content {
+  font-size: 28rpx;
+  color: #555;
+  line-height: 1.6;
+  word-break: break-all;
+}
+
+/* --- [修改点] 答案图片样式 --- */
+.answer-img {
+  width: 90%; /* 宽度 90% */
+  margin: 10rpx auto 0; /* 上边距10，水平居中 */
+  border-radius: 12rpx;
+  display: block;
+  height: auto; /* 配合 mode="widthFix" 保持原比例 */
+}
+
+/* --- [修改点] AI 分析板块样式 --- */
+.ai-block {
+  width: 95%; /* AI 板块稍微宽一点点，或者也用 90% */
+  margin: 20rpx auto 0; /* 居中 */
+  background-color: #f0f7ff;
+  padding: 20rpx;
+  border-radius: 12rpx;
+  border: 1rpx solid #d6eaff;
+}
+
+.ai-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10rpx;
+}
+
+.ai-icon {
+  width: 32rpx;
+  height: 32rpx;
+  margin-right: 10rpx;
+}
+
+.ai-title {
+  color: #007aff;
+  margin-bottom: 0;
+}
+
+.ai-content {
+  color: #444;
+  font-size: 26rpx;
+}
+
+.delete-btn {
+  text-align: right;
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 20rpx;
+  text-decoration: underline;
+  padding: 10rpx 0;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 600rpx;
+  width: 100%;
+  color: #aaa;
+  font-size: 28rpx;
+}
+
+.empty-state image {
+  width: 160rpx;
+  height: 160rpx;
+  margin-bottom: 30rpx;
+  opacity: 0.5;
+}
+
+.fab-add {
+  position: fixed;
+  bottom: 80rpx;
+  right: 40rpx;
+  width: 110rpx;
+  height: 110rpx;
+  background: linear-gradient(135deg, #007aff, #0056b3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10rpx 30rpx rgba(0, 122, 255, 0.4);
+  z-index: 999;
+}
+
+.fab-add image {
+  width: 50rpx;
+  height: 50rpx;
+}
+
+/* === 3. 编辑视图样式 === */
+.editor-view {
+  height: 100%;
+  width: 100%;
+  background-color: #fff;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 30rpx;
+  border-bottom: 1rpx solid #eee;
+}
+
+.editor-title {
+  font-size: 34rpx;
+  font-weight: bold;
+}
+
+.cancel-text {
+  font-size: 30rpx;
+  color: #666;
+  padding: 10rpx;
+}
+
+.save-btn {
+  background-color: #007aff !important;
+  color: #fff !important;
+  margin: 0 !important;
+  font-weight: normal;
+}
+
+.editor-content {
+  flex: 1;
+  width: 100%;
+  padding: 30rpx;
+}
+
+.upload-section, .input-section, .ai-section {
+  margin-bottom: 50rpx;
+  width: 100%;
+}
+
+.label {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: bold;
+  margin-bottom: 20rpx;
+  display: block;
+}
+
+.upload-box {
+  width: 100%;
+  height: 350rpx;
+  background-color: #f7f8fa;
+  border-radius: 16rpx;
+  border: 2rpx dashed #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+.upload-box.small {
+  height: 200rpx;
+}
+
+/* 编辑页面的图片保持原有的适应方式（填满框），或者也可以改为 contain */
+.upload-box image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; 
+}
+
+.upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.upload-placeholder image {
+  width: 60rpx;
+  height: 60rpx;
+  margin-bottom: 10rpx;
+  opacity: 0.4;
+  object-fit: contain;
+}
+
+.upload-placeholder text {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.note-input {
+  width: 100%;
+  height: 240rpx;
+  background-color: #f7f8fa;
+  border-radius: 12rpx;
+  padding: 20rpx;
+  font-size: 28rpx;
+  line-height: 1.5;
+}
+
+.ai-btn-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.ai-trigger-btn {
+  margin: 0 !important;
+  font-size: 26rpx;
+  background: linear-gradient(90deg, #66a6ff, #89f7fe);
+  color: #fff;
+  border-radius: 30rpx;
+  padding: 10rpx 30rpx;
+  line-height: 1.5;
+}
+
+.ai-result-box {
+  margin-top: 20rpx;
+  background-color: #f0f7ff;
+  padding: 20rpx;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  color: #333;
+  line-height: 1.5;
+  width: 100%;
+  word-break: break-all;
+}

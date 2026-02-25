@@ -1,12 +1,14 @@
 {
   "pages": [
+    "pages/homepage/homepage",
     "pages/focus/focus",
     "pages/partner/partner",
-    "pages/homepage/homepage",
     "pages/stuck/stuck",
     "pages/progress/progress",
+    "pages/achievement/achievement",
     "pages/index/index",
-    "pages/example/index"
+    "pages/example/index",
+    "pages/error-book/error-book"
   ],
   "tabBar": {
     "color": "#7A7E83",
@@ -22,10 +24,10 @@
         "text": "主页"
       },
       {
-        "pagePath": "pages/focus/focus",
-        "iconPath": "images/icons/timer.png",
-        "selectedIconPath": "images/icons/timer1.png",
-        "text": "专注"
+        "pagePath": "pages/error-book/error-book",
+        "iconPath": "images/icons/error-book.png",
+        "selectedIconPath": "images/icons/error-book1.png",
+        "text": "错题本"
       },
       {
         "pagePath": "pages/partner/partner",
@@ -40,7 +42,7 @@
         "text": "求助"
       },
       {
-        "pagePath": "pages/progress/progress",
+        "pagePath": "pages/achievement/achievement",
         "iconPath": "images/icons/progress.png",
         "selectedIconPath": "images/icons/progress1.png",
         "text": "成果"
@@ -56,5 +58,11 @@
   },
   "sitemapLocation": "sitemap.json",
   "style": "v2",
-  "lazyCodeLoading": "requiredComponents"
+  "lazyCodeLoading": "requiredComponents",
+  "plugins": {
+    "WechatSI": {
+      "version": "0.3.5",
+      "provider": "wx069ba97219f66d99"
+    }
+  }
 }

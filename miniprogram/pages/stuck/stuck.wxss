@@ -1,6 +1,22 @@
-/* 页面容器：占满全屏，列布局 */
+/* pages/stuck/stuck.wxss */
+
+/* === 1. 全局基础自适应设置 (参考 error-book) === */
+page {
+  background-color: #f5f5f5;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box; /* 关键：防止 padding 撑大宽度 */
+}
+
+/* 让所有常用组件都继承盒模型 */
+view, text, scroll-view, image, button, input, textarea {
+  box-sizing: border-box;
+}
+
+/* === 2. 页面容器 === */
 .container {
-  height: 100vh;
+  height: 100%;
+  width: 100%; /* 确保占满屏幕 */
   display: flex;
   flex-direction: column;
   background-color: #f5f5f5;
@@ -8,11 +24,11 @@
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* 聊天列表区域 */
+/* === 3. 聊天列表区域 === */
 .chat-list {
-  flex: 1;
-  padding: 20rpx;
-  box-sizing: border-box;
+  flex: 1; /* 自动撑满剩余高度 */
+  width: 100%; /* 确保宽度 100% */
+  padding: 20rpx 30rpx; /* 增加一点左右边距 */
   overflow-y: auto;
 }
 
@@ -20,81 +36,104 @@
   display: flex;
   margin-bottom: 30rpx;
   align-items: flex-start;
+  width: 100%; /* 占满行宽 */
 }
 
+/* AI 消息靠左 */
+.chat-item.left {
+  justify-content: flex-start;
+}
+
+/* 用户消息靠右 */
 .chat-item.right {
-  flex-direction: row-reverse;
+  justify-content: flex-end;
 }
 
+/* 头像样式 */
 .avatar {
   width: 80rpx;
   height: 80rpx;
-  border-radius: 50%;
-  background-color: #ddd;
-  margin: 0 10rpx;
-  flex-shrink: 0;
-}
-
-.bubble {
-  padding: 20rpx;
   border-radius: 10rpx;
-  max-width: 70%;
-  font-size: 30rpx;
-  line-height: 1.5;
-  word-wrap: break-word;
+  background-color: #ddd;
+  flex-shrink: 0; /* 防止被压缩 */
 }
 
+/* 间距控制 */
+.chat-item.left .avatar {
+  margin-right: 20rpx;
+}
+
+.chat-item.right .avatar {
+  margin-left: 20rpx;
+}
+
+/* 气泡通用样式 */
+.bubble {
+  padding: 22rpx 26rpx; /* 稍微增加内边距 */
+  border-radius: 12rpx;
+  max-width: calc(100% - 160rpx); /* 自适应最大宽度：屏幕宽 - (头像宽+间距)*2 */
+  font-size: 30rpx;
+  line-height: 1.6; /* 增加行高，提升阅读体验 */
+  word-wrap: break-word;
+  position: relative;
+}
+
+/* AI 气泡 */
 .ai-bubble {
   background-color: #fff;
   border: 1rpx solid #eee;
-  border-top-left-radius: 0;
+  color: #333;
 }
 
+/* 用户气泡 */
 .user-bubble {
-  background-color: #95ec69; /* 微信绿 */
+  background-color: #95ec69;
   border: 1rpx solid #8ad961;
-  border-top-right-radius: 0;
+  color: #000;
 }
 
 /* 加载动画 */
 .loading-wrap {
+  width: 100%;
   text-align: center;
   margin-bottom: 20rpx;
   color: #999;
   font-size: 24rpx;
 }
 
-/* 底部输入区 */
+/* === 4. 底部输入区域 === */
 .input-area {
+  width: 100%; /* 宽度 100% */
   background-color: #f7f7f7;
-  padding: 16rpx 20rpx;
+  padding: 20rpx 30rpx; /* 调整内边距 */
   display: flex;
   align-items: center;
   border-top: 1rpx solid #e5e5e5;
-  min-height: 100rpx;
+  min-height: 110rpx; /* 稍微增高 */
 }
 
 .icon-btn {
   width: 56rpx;
   height: 56rpx;
   margin-right: 20rpx;
+  flex-shrink: 0; /* 防止图标被压缩 */
 }
 
 .text-input {
-  flex: 1;
+  flex: 1; /* 自适应占据中间空间 */
   background-color: #fff;
-  height: 72rpx;
-  border-radius: 8rpx;
+  height: 76rpx;
+  border-radius: 10rpx;
   padding: 0 20rpx;
   font-size: 30rpx;
 }
 
 .voice-btn {
-  flex: 1;
-  height: 72rpx;
-  line-height: 72rpx;
+  flex: 1; /* 自适应占据中间空间 */
+  height: 76rpx;
+  line-height: 76rpx;
   text-align: center;
-  border-radius: 8rpx;
+  border-radius: 10rpx;
   background-color: #fff;
   border: 1rpx solid #ddd;
   font-size: 30rpx;
@@ -111,7 +150,11 @@
   margin-left: 20rpx;
   background-color: #07c160;
   color: white;
-  padding: 10rpx 30rpx;
-  border-radius: 8rpx;
+  padding: 0 30rpx; /* 改用左右 padding 控制宽度 */
+  height: 64rpx;     /* 稍微调低一点高度 */
+  line-height: 64rpx;
+  border-radius: 10rpx;
   font-size: 28rpx;
+  flex-shrink: 0;    /* 防止被压缩 */
+  white-space: nowrap; /* 防止文字换行 */
 }

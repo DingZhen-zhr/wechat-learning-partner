@@ -5,14 +5,14 @@ Page({
   data: {
     // --- 搭子问候相关 ---
     aiGreetingText: '正在加载问候语...',
-    partnerAvatar: '/images/icons/doubao.png', // 建议使用本地图片，更稳定
+    partnerAvatar: '/images/icons/doubao.png',
 
     // --- 学习概览相关 ---
     todayLearnedDuration: '0h 0m',
     planCompletionRate: 0,
 
     // --- 计划列表相关 ---
-    planList: [], // 页面加载时会从缓存读取
+    planList: [], 
 
     // --- 控制添加任务弹窗 ---
     showAddPlanModal: false,
@@ -20,33 +20,21 @@ Page({
     newPlanDuration: '',
 
     // --- 用于手动滑动删除 ---
-    touchStartX: 0, // 记录触摸起始位置的X坐标
-    touchStartY: 0, // 记录触摸起始位置的Y坐标
-    deleteThreshold: -160, // 滑动阈值, 与 wxss 中 .delete-action 的宽度一致
+    touchStartX: 0, 
+    touchStartY: 0, 
+    deleteThreshold: -160, 
   },
 
-  /**
-   * 页面加载时，只在第一次进入时执行
-   */
   onLoad(options) {
     this.loadPlanList();
     this.getAIGreeting();
     this.updateTodaySummary();
   },
 
-  /**
-   * 页面显示时，每次切到该页或从其他页返回时都会执行
-   */
   onShow() {
     this.loadPlanList();
     this.updateTodaySummary();
-
-    // 检查并处理从 focus 页面通过全局变量回传的学习记录
-    if (app && app.globalData && app.globalData.lastStudyRecord) {
-      this.handleStudyRecord(app.globalData.lastStudyRecord);
-      // 处理完后立即清空，这是非常重要的一步，防止重复处理
-      app.globalData.lastStudyRecord = null; 
-    }
+    // 刷新概览，确保从 focus 页返回后数据是最新的
   },
 
   /**
@@ -54,14 +42,12 @@ Page({
    */
   loadPlanList() {
     let planList = wx.getStorageSync('planList') || [];
-    // 为每个任务项初始化滑动所需的 x 坐标和 isDeleting 状态
+    // 初始化滑动状态
     planList.forEach(item => {
-      item.x = 0;
+      if (typeof item.x === 'undefined') item.x = 0;
       item.isDeleting = false;
     }); 
-    this.setData({
-      planList: planList
-    });
+    this.setData({ planList });
   },
 
   /**
@@ -87,7 +73,7 @@ Page({
   },
 
   /**
-   * 更新今日学习概览 (按任务数量计算)
+   * 更新今日学习概览
    */
   updateTodaySummary() {
     const todayRecords = wx.getStorageSync('todayRecords') || [];
@@ -110,25 +96,46 @@ Page({
   },
 
   /**
-   * 点击开始按钮，跳转到专注页面
+   * [核心修改] 点击开始按钮，跳转到专注页面
+   * 重点：确保 subject 被正确获取并编码放入 URL
    */
   startFocus(e) {
-    const item = e.currentTarget.dataset.item;
-    if (!item) { return; }
+    // 1. 获取任务数据
+    // 兼容逻辑：优先取 event.detail.item (如果组件emit传了), 否则取 dataset
+    const item = (e.detail && e.detail.item) || e.currentTarget.dataset.item;
+    
+    console.log('准备开始任务:', item); // 【调试点】请在控制台看这里打印出的 subject 是否正确
+
+    if (!item) { 
+      wx.showToast({ title: '数据获取失败', icon: 'none' });
+      return; 
+    }
+    
     if (item.status === 'done') {
       wx.showToast({ title: '这个任务已经完成啦', icon: 'none' });
       return;
     }
     
-    // 使用全局变量为 tabBar 页面传参
-    if (app && app.globalData) {
-      app.globalData.pendingFocusParams = {
-        id: item.id,
-        subject: item.subject,
-        duration: item.duration
-      };
-    }
-    wx.switchTab({ url: '/pages/focus/focus' });
+    // 2. 拼接 URL，使用 encodeURIComponent 处理中文
+    const url = `/pages/focus/focus?id=${item.id}&subject=${encodeURIComponent(item.subject)}&duration=${item.duration}`;
+
+    console.log('跳转URL:', url); // 【调试点】检查 URL 中 subject 是否正确
+
+    // 3. 跳转
+    wx.navigateTo({
+      url: url,
+      events: {
+        // 监听 focus 页面传回的数据
+        acceptStudyRecord: (data) => {
+          console.log('[homepage] 接收到专注页回传的数据:', data);
+          this.handleStudyRecord(data);
+        }
+      },
+      fail: (err) => {
+        console.error('跳转失败', err);
+        wx.showToast({ title: '跳转失败', icon: 'none' });
+      }
+    });
   },
 
   /**
@@ -139,19 +146,27 @@ Page({
       return;
     }
 
+    // 1. 更新时长记录 (防重)
     const todayRecords = wx.getStorageSync('todayRecords') || [];
-    if (!todayRecords.some(r => r.id === record.id)) {
+    // 简单防重: ID相同且时间戳接近
+    const isDuplicate = todayRecords.some(r => r.id === record.id && Math.abs((r.time || 0) - record.time) < 2000);
+    
+    if (!isDuplicate) {
         todayRecords.push(record);
         wx.setStorageSync('todayRecords', todayRecords);
     }
 
+    // 2. 更新任务状态为已完成
     const planList = this.data.planList;
     const planIndex = planList.findIndex(p => p.id === record.id);
-    if (planIndex !== -1 && planList[planIndex].status !== 'done') {
-        planList[planIndex].status = 'done';
-        this.setData({ planList });
-        wx.setStorageSync('planList', planList);
-        this.updateTodaySummary(); 
+    
+    if (planIndex !== -1) {
+        if (planList[planIndex].status !== 'done') {
+            planList[planIndex].status = 'done';
+            this.setData({ planList }); 
+            wx.setStorageSync('planList', planList); 
+            this.updateTodaySummary(); 
+        }
     }
   },
   
@@ -159,26 +174,20 @@ Page({
     wx.showToast({ title: '搭子给你打气啦！加油！', icon: 'none' });
   },
 
-  /**
-   * 打开添加任务的弹窗
-   */
+  // --- 弹窗逻辑 ---
   openAddPlanModal() {
     this.setData({ showAddPlanModal: true, newPlanSubject: '', newPlanDuration: '' });
   },
-
-  /**
-   * 关闭添加任务的弹窗
-   */
   closeAddPlanModal() {
     this.setData({ showAddPlanModal: false });
   },
-
   preventModalClose() {},
   onSubjectInput(e) { this.setData({ newPlanSubject: e.detail.value }); },
   onDurationInput(e) { this.setData({ newPlanDuration: e.detail.value }); },
   
   /**
-   * 处理“确认添加”按钮的点击事件
+   * 新增任务
+   * 确保 newPlanSubject 被正确写入
    */
   handleAddNewPlan() {
     const { newPlanSubject, newPlanDuration, planList } = this.data;
@@ -186,30 +195,31 @@ Page({
       wx.showToast({ title: '请填写有效信息', icon: 'none' });
       return;
     }
+
     const newPlan = { 
       id: Date.now(), 
-      subject: newPlanSubject, 
+      subject: newPlanSubject, // 这里保存了自定义名称
       duration: parseInt(newPlanDuration), 
       status: 'pending', 
-      x: 0, // 用于滑动删除的x坐标
-      isDeleting: false // 用于删除动画
+      x: 0, 
+      isDeleting: false 
     };
+
     const updatedPlanList = [newPlan, ...planList];
     this.setData({ planList: updatedPlanList });
     wx.setStorageSync('planList', updatedPlanList);
+    
     this.closeAddPlanModal();
     wx.showToast({ title: '添加成功！', icon: 'success' });
     this.updateTodaySummary();
   },
 
-  /**
-   * 手动滑动删除系列函数
-   */
+  // --- 滑动删除逻辑 ---
   onTouchStart(e) {
+    if (e.touches.length > 1) return; 
     const index = e.currentTarget.dataset.index;
-    // 关闭其他所有已打开的滑块
     this.data.planList.forEach((item, i) => {
-      if (i !== index) item.x = 0;
+      if (i !== index) item.x = 0; 
     });
     this.setData({
       planList: this.data.planList,
@@ -219,24 +229,19 @@ Page({
   },
 
   onTouchMove(e) {
+    if (e.touches.length > 1) return;
     const index = e.currentTarget.dataset.index;
     const moveX = e.touches[0].clientX;
     const moveY = e.touches[0].clientY;
     const deltaX = moveX - this.data.touchStartX;
     const deltaY = moveY - this.data.touchStartY;
 
-    // 如果垂直滑动距离大于水平滑动距离，则判断为页面滚动，不进行水平滑动
-    if (Math.abs(deltaY) > Math.abs(deltaX)) {
-      return;
-    }
+    if (Math.abs(deltaY) > Math.abs(deltaX)) return; 
     
-    // 只允许左滑
-    if (deltaX < 0) {
+    if (deltaX < 0) { 
       const newX = Math.max(deltaX, this.data.deleteThreshold);
       this.data.planList[index].x = newX;
-      this.setData({
-        planList: this.data.planList
-      });
+      this.setData({ planList: this.data.planList });
     }
   },
 
@@ -244,16 +249,12 @@ Page({
     const index = e.currentTarget.dataset.index;
     const currentX = this.data.planList[index].x;
     const threshold = this.data.deleteThreshold / 2;
-
     this.data.planList[index].x = currentX < threshold ? this.data.deleteThreshold : 0;
-    this.setData({
-      planList: this.data.planList
-    });
+    this.setData({ planList: this.data.planList });
   },
 
   handleDeletePlan(e) {
     const idToDelete = e.currentTarget.dataset.id;
-    
     wx.showModal({
       title: '确认删除',
       content: '确定要删除这个计划吗？',
@@ -262,27 +263,22 @@ Page({
         if (res.confirm) {
           const index = this.data.planList.findIndex(item => item.id === idToDelete);
           if (index > -1) {
-            // 触发删除动画
             this.data.planList[index].isDeleting = true;
             this.setData({ planList: this.data.planList });
 
-            // 动画结束后再真正从数据中删除
             setTimeout(() => {
               const updatedPlanList = this.data.planList.filter(item => item.id !== idToDelete);
               this.setData({ planList: updatedPlanList });
               wx.setStorageSync('planList', updatedPlanList);
               this.updateTodaySummary();
               wx.showToast({ title: '删除成功', icon: 'none' });
-            }, 300); // 动画时长应与 wxss 中 transition 时间一致
+            }, 300);
           }
         } else {
-          // 用户取消，将滑块归位
           const index = this.data.planList.findIndex(item => item.id === idToDelete);
           if (index > -1) {
             this.data.planList[index].x = 0;
-            this.setData({
-              planList: this.data.planList
-            });
+            this.setData({ planList: this.data.planList });
           }
         }
       }
